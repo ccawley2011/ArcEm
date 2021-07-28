@@ -4,6 +4,7 @@
 #include "win.h"
 #include "gui.h"
 #include "armdefs.h"
+#include "arch/joystick.h"
 #include "arch/keyboard.h"
 
 #define NR_THREADS (0x1000)
@@ -139,6 +140,36 @@ void OpenFloppyImageDialog(int drive) {
 	}
 }
 
+static void handleJoystick(ARMul_State* state, int id, UINT wParam, bool up) {
+    if (wParam & JOY_BUTTON1CHG)
+        joystick_button_changed(&JOY, id, 0, up);
+    if (wParam & JOY_BUTTON2CHG)
+        joystick_button_changed(&JOY, id, 1, up);
+    if (wParam & JOY_BUTTON3CHG)
+        joystick_button_changed(&JOY, id, 2, up);
+    if (wParam & JOY_BUTTON4CHG)
+        joystick_button_changed(&JOY, id, 3, up);
+}
+
+static BOOL InitJoystick(ARMul_State* state, HWND hWnd)
+{
+    JOYCAPS caps;
+    UINT numDevs, i;
+
+    numDevs = joyGetNumDevs();
+    for (i = 0; i < numDevs; i++) {
+        if (joyGetDevCaps(i, &caps, sizeof(JOYCAPS)) != JOYERR_NOERROR)
+            return FALSE;
+
+        if (joySetCapture(hWnd, i, 0, FALSE) != JOYERR_NOERROR)
+            return FALSE;
+
+        joystick_add(&JOY, caps.wNumButtons, caps.wNumAxes);
+    }
+
+    return TRUE;
+}
+
 //
 //   FUNCTION: InitInstance(HANDLE, int)
 //
@@ -195,6 +226,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
   switch (message)
   {
+    case WM_CREATE:
+      InitJoystick(state, hWnd);
+      break;
+
     case WM_COMMAND:
       wmId    = LOWORD(wParam);
       wmEvent = HIWORD(wParam);
@@ -343,6 +378,32 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
                     keyboard_key_changed(&KBD, ARCH_KEY_button_5, 1);
                 }
             }
+            break;
+
+        case MM_JOY1MOVE:
+            joystick_axis_changed(&JOY, 0, 0, LOWORD(lParam) - 32767);
+            joystick_axis_changed(&JOY, 0, 1, HIWORD(lParam) - 32767);
+            break;
+
+        case MM_JOY2MOVE:
+            joystick_axis_changed(&JOY, 1, 0, LOWORD(lParam) - 32767);
+            joystick_axis_changed(&JOY, 1, 1, HIWORD(lParam) - 32767);
+            break;
+
+        case MM_JOY1BUTTONDOWN:
+            handleJoystick(state, 0, wParam, 0);
+            break;
+
+        case MM_JOY1BUTTONUP:
+            handleJoystick(state, 0, wParam, 1);
+            break;
+
+        case MM_JOY2BUTTONDOWN:
+            handleJoystick(state, 1, wParam, 0);
+            break;
+
+        case MM_JOY2BUTTONUP:
+            handleJoystick(state, 1, wParam, 1);
             break;
 
         case WM_SETCURSOR:

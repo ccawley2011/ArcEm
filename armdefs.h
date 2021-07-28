@@ -214,6 +214,7 @@ typedef enum ARMStartIns {
 } ARMStartIns;
 
 typedef struct arch_keyboard arch_keyboard;
+typedef struct arch_joystick arch_joystick;
 typedef struct Vidc_Regs Vidc_Regs;
 
 #define Exception_IRQ R15IBIT
@@ -230,6 +231,7 @@ struct ARMul_State {
    ARMword Exception;         /* IRQ & FIQ pins */
    Vidc_Regs *Display;        /* VIDC regs/host display struct */
    arch_keyboard *Kbd;        /* Keyboard struct */
+   arch_joystick* Joy;        /* Joystick struct */
    ARMword Bank;              /* the current register bank */
    unsigned NtransSig;        /* MEMC USR/SVC flag, somewhat redundant with FastMapMode */
    ARMword Base;              /* extra hand for base writeback */

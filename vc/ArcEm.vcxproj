@@ -296,6 +296,7 @@
     <ClCompile Include="..\arch\filecommon.c" />
     <ClCompile Include="..\arch\hdc63463.c" />
     <ClCompile Include="..\arch\i2c.c" />
+    <ClCompile Include="..\arch\joystick.c" />
     <ClCompile Include="..\arch\keyboard.c" />
     <ClCompile Include="..\arch\newsound.c" />
     <ClCompile Include="..\arch\ReadConfig.c" />
@@ -326,6 +327,7 @@
     <ClInclude Include="..\arch\filecalls.h" />
     <ClInclude Include="..\arch\hdc63463.h" />
     <ClInclude Include="..\arch\i2c.h" />
+    <ClInclude Include="..\arch\joystick.h" />
     <ClInclude Include="..\arch\keyboard.h" />
     <ClInclude Include="..\arch\ReadConfig.h" />
     <ClInclude Include="..\arch\sound.h" />

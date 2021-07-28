@@ -892,6 +892,13 @@ Kbd_PollHostKbd(ARMul_State *state)
   return 0;
 }
 
+int
+Joy_PollHostJoy(ARMul_State* state)
+{
+  /* TODO */
+  return 0;
+}
+
 /*-----------------------------------------------------------------------------*/
 
 

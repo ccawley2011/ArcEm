@@ -9,6 +9,7 @@
 
 #include "dbugsys.h"
 
+#include "ArcemConfig.h"
 #include "armarc.h"
 #include "fdc1772.h"
 #include "hdc63463.h"
@@ -16,6 +17,7 @@
 #ifdef HOSTFS_SUPPORT
 # include "hostfs.h"
 #endif
+#include "joystick.h"
 #include "keyboard.h"
 #include "displaydev.h"
 #include "sound.h"
@@ -67,6 +69,7 @@ IO_Init(ARMul_State *state)
   FDC_Init(state);
   HDC_Init(state);
   Kbd_Init(state);
+  Joy_Init(state);
   EventQ_Insert(state,ARMul_Time+250,FDCHDC_Poll);
 } /* IO_Init */
 
@@ -503,6 +506,9 @@ GetWord_IO(ARMul_State *state, ARMword address)
         return FDC_Read(state, offset);
 
       case 2:
+        if (hArcemConfig.eJoystick == Joystick_RTFM)
+          return RTFM_Read(state, offset);
+
         dbug_ioc("Read from Econet register (addr=0x%x speed=0x%x offset=0x%x)\n",
                  address, speed, offset);
         break;

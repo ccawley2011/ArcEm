@@ -924,6 +924,12 @@ Kbd_PollHostKbd(ARMul_State *state)
   return 0;
 } /* DisplayKbd_PollHost */
 
+int
+Joy_PollHostJoy(ARMul_State* state)
+{
+  /* TODO */
+  return 0;
+}
 
 /**
  * Resize_Window

@@ -59,6 +59,11 @@ typedef enum ArcemConfig_DisplayDriver_e {
   DisplayDriver_Standard, /* i.e. 16/32bpp true colour */
 } ArcemConfig_DisplayDriver;
 
+typedef enum ArcemConfig_Joystick_e {
+  Joystick_None,
+  Joystick_RTFM
+} ArcemConfig_Joystick;
+
 /* THIS IS THE MAIN CONFIGURATION STRUCTURE */
 
 typedef struct ArcemConfig_s {
@@ -77,6 +82,8 @@ typedef struct ArcemConfig_s {
 
   /* Shapes of the MFM ST506 drives as set in the config file */
   struct HDCshape aST506DiskShapes[4];
+
+  ArcemConfig_Joystick eJoystick;
 
   /* Platform-specific bits */
 #if defined(SYSTEM_riscos_single)

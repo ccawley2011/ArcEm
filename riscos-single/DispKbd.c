@@ -954,6 +954,14 @@ Kbd_PollHostKbd(ARMul_State *state)
 } /* Kbd_PollHostKbd */
 
 /*-----------------------------------------------------------------------------*/
+int
+Joy_PollHostJoy(ARMul_State* state)
+{
+  /* TODO */
+  return 0;
+}
+
+/*-----------------------------------------------------------------------------*/
 
 static void InitModeTable(void)
 {

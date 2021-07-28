@@ -27,6 +27,13 @@
 // Local functions
 static char *arcemconfig_StringDuplicate(const char *sInput);
 
+#define STREQ(x,y)     (strcmp(x,y) == 0)
+#ifdef _MSC_VER
+#define STRCASEEQ(x,y) (stricmp(x,y) == 0)
+#else
+#define STRCASEEQ(x,y) (strcasecmp(x,y) == 0)
+#endif
+
 
 
 // Global Variable holding the configuration runtime options of
@@ -79,6 +86,7 @@ void ArcemConfig_SetupDefaults(void)
   /* Default for ST506 drive details is all NULL/zeros */
   memset(hArcemConfig.aST506DiskShapes, 0, sizeof(struct HDCshape) * 4);
 
+  hArcemConfig.eJoystick = Joystick_RTFM;
 
 #if defined(SYSTEM_riscos_single)
   hArcemConfig.eDisplayDriver = DisplayDriver_Palettised;
@@ -126,6 +134,8 @@ void ArcemConfig_ParseCommandLine(int argc, char *argv[])
     "     '8M', '12M' or '16M'\n"
     "  --processor <value> - Set the emulated CPU\n"
     "     Where value is one of 'ARM2', 'ARM250', 'ARM3'\n"
+    "  --joystick <value> - Set the emulated joystick interface\n"
+    "     Where value is one of 'None', 'RTFM'\n"
 #if defined(SYSTEM_riscos_single)
     "  --display <mode> - Select display driver, 'pal' or 'std'\n"
     "  --rbswap - Swap red & blue in 16bpp mode (e.g. for Iyonix with GeForce FX)\n"
@@ -300,6 +310,26 @@ void ArcemConfig_ParseCommandLine(int argc, char *argv[])
       } else {
         // No argument following the --processor option
         ControlPane_Error(EXIT_FAILURE,"No argument following the --processor option\n");
+      }
+    }
+    else if (0 == strcmp("--joystick", argv[iArgument])) {
+      if (iArgument + 1 < argc) { // Is there a following argument?
+        if (STRCASEEQ("rtfm", argv[iArgument + 1])) {
+          hArcemConfig.eJoystick = Joystick_RTFM;
+
+          iArgument += 2;
+        }
+        else if (STRCASEEQ("none", argv[iArgument + 1])) {
+          hArcemConfig.eJoystick = Joystick_None;
+
+          iArgument += 2;
+        }
+        else {
+          ControlPane_Error(EXIT_FAILURE, "Unrecognised value to the --joystick option\n");
+        }
+      } else {
+        // No argument following the --processor option
+        ControlPane_Error(EXIT_FAILURE, "No argument following the --joystick option\n");
       }
     }
 #if defined(SYSTEM_riscos_single)

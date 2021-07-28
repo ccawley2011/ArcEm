@@ -11,7 +11,7 @@ SRCS = armcopro.c armemu.c arminit.c armarc.c &
 	armsupp.c main.c dagstandalone.c eventq.c &
 	arch/i2c.c arch/archio.c &
 	arch/fdc1772.c arch/hdc63463.c arch/ReadConfig.c &
-	arch/keyboard.c arch/filecommon.c &
+	arch/joystick.c arch/keyboard.c arch/filecommon.c &
 	arch/ArcemConfig.c arch/cp15.c arch/newsound.c arch/displaydev.c
 
 CFLAGS += -DWIN32 -DSYSTEM_win -Iwin

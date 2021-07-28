@@ -4,6 +4,7 @@
 
 #include "../armdefs.h"
 #include "armarc.h"
+#include "../arch/joystick.h"
 #include "../arch/keyboard.h"
 #include "displaydev.h"
 #include "win.h"
@@ -262,3 +263,10 @@ Kbd_PollHostKbd(ARMul_State *state)
   return 0;
 }
 
+/*-----------------------------------------------------------------------------*/
+int
+Joy_PollHostJoy(ARMul_State* state)
+{
+  /* Joystick input is handled in WndProc */
+  return 0;
+}

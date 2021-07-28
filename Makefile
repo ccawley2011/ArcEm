@@ -85,7 +85,7 @@ OBJS = armcopro.o armemu.o arminit.o \
 	armsupp.o main.o dagstandalone.o eventq.o \
 		$(SYSTEM)/DispKbd.o arch/i2c.o arch/archio.o \
     arch/fdc1772.o $(SYSTEM)/ControlPane.o arch/hdc63463.o arch/ReadConfig.o \
-    arch/keyboard.o $(SYSTEM)/filecalls.o arch/filecommon.o \
+    arch/joystick.o arch/keyboard.o $(SYSTEM)/filecalls.o arch/filecommon.o \
     arch/ArcemConfig.o arch/cp15.o arch/newsound.o arch/displaydev.o
 
 SRCS = armcopro.c armemu.c arminit.c arch/armarc.c \
@@ -94,11 +94,12 @@ SRCS = armcopro.c armemu.c arminit.c arch/armarc.c \
 	arch/fdc1772.c $(SYSTEM)/ControlPane.c arch/hdc63463.c \
 	arch/ReadConfig.c arch/keyboard.c $(SYSTEM)/filecalls.c \
 	arch/ArcemConfig.c arch/cp15.c arch/newsound.c \
-	arch/displaydev.c arch/filecommon.c
+	arch/displaydev.c arch/filecommon.c arch/joystick.c
 
 INCS = armdefs.h armemu.h $(SYSTEM)/KeyTable.h \
   arch/i2c.h arch/archio.h arch/fdc1772.h arch/ControlPane.h \
-  arch/hdc63463.h arch/keyboard.h arch/ArcemConfig.h arch/cp15.h
+  arch/hdc63463.h arch/keyboard.h arch/ArcemConfig.h arch/cp15.h \
+  arch/joystick.h
 
 TARGET=arcem
 
@@ -323,6 +324,9 @@ $(SYSTEM)/ControlPane.o: $(SYSTEM)/ControlPane.c arch/ControlPane.h \
 arch/ReadConfig.o: arch/ReadConfig.c arch/ReadConfig.h \
 	arch/armarc.h
 	$(CC) $(CFLAGS) -c $*.c -o arch/ReadConfig.o
+
+arch/joystick.o: arch/joystick.c arch/joystick.h
+	$(CC) $(CFLAGS) -c $*.c -o arch/joystick.o
 
 arch/keyboard.o: arch/keyboard.c arch/keyboard.h
 	$(CC) $(CFLAGS) -c $*.c -o arch/keyboard.o

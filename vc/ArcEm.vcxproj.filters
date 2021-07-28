@@ -45,6 +45,9 @@
     <ClCompile Include="..\arch\i2c.c">
       <Filter>arch</Filter>
     </ClCompile>
+    <ClCompile Include="..\arch\joystick.c">
+      <Filter>arch</Filter>
+    </ClCompile>
     <ClCompile Include="..\arch\keyboard.c">
       <Filter>arch</Filter>
     </ClCompile>
@@ -111,6 +114,9 @@
       <Filter>arch</Filter>
     </ClInclude>
     <ClInclude Include="..\arch\i2c.h">
+      <Filter>arch</Filter>
+    </ClInclude>
+    <ClInclude Include="..\arch\joystick.h">
       <Filter>arch</Filter>
     </ClInclude>
     <ClInclude Include="..\arch\keyboard.h">

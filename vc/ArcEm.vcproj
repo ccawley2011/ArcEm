@@ -448,6 +448,32 @@
 				>
 			</File>
 			<File
+				RelativePath="..\arch\joystick.c"
+				>
+				<FileConfiguration
+					Name="Release|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+				<FileConfiguration
+					Name="Debug|Win32"
+					>
+					<Tool
+						Name="VCCLCompilerTool"
+						AdditionalIncludeDirectories=""
+						PreprocessorDefinitions=""
+					/>
+				</FileConfiguration>
+			</File>
+			<File
+				RelativePath="..\arch\joystick.h"
+				>
+			</File>
+			<File
 				RelativePath="..\arch\keyboard.c"
 				>
 				<FileConfiguration
