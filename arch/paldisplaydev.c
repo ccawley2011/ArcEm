@@ -629,10 +629,22 @@ static void PDD_Name(EventFunc)(ARMul_State *state,CycleCount nowtime)
   }
 
   /* Update host palette */
-  if(DC.DirtyPalette & 0x10000)
+  if(DC.DirtyPalette & 0x80000)
   {
     PDD_Name(Host_SetBorderColour)(state,VIDC.BorderCol);
-    DC.DirtyPalette -= 0x10000;
+    DC.DirtyPalette -= 0x80000;
+  }
+  if (DC.DirtyPalette & 0x70000)
+  {
+    int i;
+    for (i=0;i<3;i++)
+    {
+      if (DC.DirtyPalette & (1<<(i+16)))
+      {
+        PDD_Name(Host_SetCursorPaletteEntry)(state,i,VIDC.CursorPalette[i]);
+      }
+    }
+    DC.DirtyPalette &= 0xffff;
   }
   if(DC.DirtyPalette)
   {
@@ -822,16 +834,21 @@ static void PDD_Name(VIDCPutVal)(ARMul_State *state,ARMword address, ARMword dat
       if(VIDC.BorderCol != val)
       {
         VIDC.BorderCol = val;
-        DC.DirtyPalette |= 0x10000;
+        DC.DirtyPalette |= 0x80000;
       }
       break;
 
     case 0x44: /* Cursor palette log col 1 */
     case 0x48: /* Cursor palette log col 2 */
     case 0x4c: /* Cursor palette log col 3 */
+      val &= 0x1fff;
       addr = (addr-0x44)>>2;
       dbug_vidc("VIDC cursor log col %d write val=0x%x\n",addr+1,val);
-      VIDC.CursorPalette[addr] = val & 0x1fff;
+      if (VIDC.CursorPalette[addr] != val)
+      {
+        VIDC.CursorPalette[addr] = val;
+        DC.DirtyPalette |= (1 << (addr+16));
+      }
       break;
 
     case 0x60: /* Stereo image reg 7 */
@@ -980,7 +997,7 @@ static int PDD_Name(Init)(ARMul_State *state,const struct Vidc_Regs *Vidc)
 
   DC.ModeChanged = true;
   DC.LastHostWidth = DC.LastHostHeight = DC.LastHostHz = DC.LastHostDepth = -1;
-  DC.DirtyPalette = 65535;
+  DC.DirtyPalette = -1;
   DC.VIDC_CR = 0;
   DC.DMAEn = false;
 
