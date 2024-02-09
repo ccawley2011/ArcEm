@@ -191,7 +191,7 @@ typedef struct {
           code, so be aware of how many systems are using the queue. At the
           moment, these are:
 
-          arch/newsound.c - One entry for sound DMA fetches
+          arch/XXXsounddev.c - One entry for sound DMA fetches
           arch/XXXdisplaydev.c - One entry for screen updates
           arch/keyboard.c - One entry for keyboard/mouse polling
           arch/archio.c - One entry for IOC timers
@@ -222,6 +222,7 @@ typedef enum ARMStartIns {
 
 typedef struct arch_keyboard arch_keyboard;
 typedef struct Vidc_Regs Vidc_Regs;
+typedef struct SoundInfo SoundInfo;
 typedef struct ArcemConfig_s ArcemConfig;
 
 #define Exception_IRQ R15IBIT
@@ -237,6 +238,7 @@ struct ARMul_State {
    ARMword AbortAddr;         /* to keep track of Prefetch aborts */
    ARMword Exception;         /* IRQ & FIQ pins */
    Vidc_Regs *Display;        /* VIDC regs/host display struct */
+   SoundInfo *Sound;          /* Sound output data */
    arch_keyboard *Kbd;        /* Keyboard struct */
    ARMword Bank;              /* the current register bank */
    unsigned NtransSig;        /* MEMC USR/SVC flag, somewhat redundant with FastMapMode */

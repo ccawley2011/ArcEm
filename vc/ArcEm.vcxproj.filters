@@ -54,7 +54,7 @@
     <ClCompile Include="..\arch\keyboard.c">
       <Filter>arch</Filter>
     </ClCompile>
-    <ClCompile Include="..\arch\newsound.c">
+    <ClCompile Include="..\arch\sounddev.c">
       <Filter>arch</Filter>
     </ClCompile>
     <ClCompile Include="..\win\ControlPane.c">

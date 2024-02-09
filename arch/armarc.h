@@ -5,9 +5,7 @@
 #include "../armdefs.h"
 #include "archio.h"
 #include "fdc1772.h"
-#ifdef SOUND_SUPPORT
 #include "sound.h"
-#endif
 
 /* Memory map locations */
 #define MEMORY_0x3800000_R_ROM_HIGH   0x3800000  /* Some sections of the memory map    */

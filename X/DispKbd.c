@@ -26,9 +26,6 @@
 #include "arch/keyboard.h"
 #include "arch/archio.h"
 #include "arch/hdc63463.h"
-#ifdef SOUND_SUPPORT
-#include "arch/sound.h"
-#endif
 #include "arch/displaydev.h"
 
 #include "ControlPane.h"

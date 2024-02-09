@@ -297,7 +297,7 @@
     <ClCompile Include="..\arch\hdc63463.c" />
     <ClCompile Include="..\arch\i2c.c" />
     <ClCompile Include="..\arch\keyboard.c" />
-    <ClCompile Include="..\arch\newsound.c" />
+    <ClCompile Include="..\arch\sounddev.c" />
     <ClCompile Include="..\armcopro.c" />
     <ClCompile Include="..\armemu.c" />
     <ClCompile Include="..\arminit.c" />

@@ -2257,9 +2257,7 @@ static void SDD_Name(VIDCPutVal)(ARMul_State *state,ARMword address, ARMword dat
       if(VIDC.StereoImageReg[addr] != val)
       {
         VIDC.StereoImageReg[addr] = val;
-#ifdef SOUND_SUPPORT
         Sound_StereoUpdated(state);
-#endif
       }
       break;
 
@@ -2349,9 +2347,7 @@ static void SDD_Name(VIDCPutVal)(ARMul_State *state,ARMword address, ARMword dat
       if(VIDC.SoundFreq != val)
       {
         VIDC.SoundFreq=val;
-#ifdef SOUND_SUPPORT
         Sound_SoundFreqUpdated(state);
-#endif
       }
       break;
 

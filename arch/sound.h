@@ -3,42 +3,37 @@
 
 #include "../c99.h"
 
-typedef int16_t SoundData;
-
-extern int Sound_BatchSize; /* How many 16*2 sample batches to attempt to deliver to the platform code at once */
-extern CycleCount Sound_DMARate; /* How many cycles between DMA fetches */
-extern CycleDiff Sound_FudgeRate; /* Extra fudge factor applied to Sound_DMARate */
-
 typedef enum {
   Stereo_LeftRight, /* Data is ordered with left channel first */
   Stereo_RightLeft, /* Data is ordered with right channel first */
 } Sound_StereoSense;
 
-extern Sound_StereoSense eSound_StereoSense;
+typedef struct {
+	int (*Init)(ARMul_State *state); /* Initialise sound device, return nonzero on failure */
+	void (*Shutdown)(ARMul_State *state); /* Shutdown sound device */
+	void (*SoundFreqUpdated)(ARMul_State *state); /* Called whenever the VIDC frequency register is updated */
+	void (*StereoUpdated)(ARMul_State *state); /* Called whenever the VIDC stereo image registers are updated */
+} SoundDev;
 
-extern int Sound_Init(ARMul_State *state);
+extern int SoundDev_Init(ARMul_State *state); /* Switch to indicated sound device, returns nonzero on failure */
 
-extern void Sound_UpdateDMARate(ARMul_State *state);
+/* Host must provide this function to initialize the default display device */
+extern int SoundDev_Set(ARMul_State *state, const SoundDev *dev);
 
-#ifdef SOUND_SUPPORT
-extern uint32_t Sound_HostRate; /* Rate of host sound system, in 1/1024 Hz. Must be set by host on init. */
-
-/* These calls are made by DispKbdShared when the corresponding registers are updated */
+/**
+ * Sound_SoundFreqUpdated
+ *
+ * Called whenever the VIDC frequency register is updated.
+ */
 extern void Sound_SoundFreqUpdated(ARMul_State *state);
+
+/**
+ * Sound_StereoUpdated
+ *
+ * Called whenever the VIDC stereo image registers are updated so that the
+ * channelAmount array can be recalculated and the new number of channels can
+ * be figured out.
+ */
 extern void Sound_StereoUpdated(ARMul_State *state);
-
-/* This call is made to the platform code upon initialisation */
-extern int Sound_InitHost(ARMul_State *state);
-
-/* This call is made to the platform code to get a pointer to an output buffer
-   destavail must be set to the available space, measured in the number of stereo pairs (i.e. 4 byte units)
-*/
-extern SoundData *Sound_GetHostBuffer(int32_t *destavail);
-
-/* This call is made to the platform code once the above buffer has been filled
-   numSamples is the number of stereo pairs that were placed in the buffer
-*/
-extern void Sound_HostBuffered(SoundData *buffer,int32_t numSamples);
-#endif
 
 #endif

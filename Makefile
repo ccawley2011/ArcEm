@@ -89,7 +89,7 @@ OBJS = armcopro.o armemu.o arminit.o \
 		$(SYSTEM)/DispKbd.o arch/i2c.o arch/archio.o \
     arch/fdc1772.o $(SYSTEM)/ControlPane.o arch/hdc63463.o \
     arch/keyboard.o $(SYSTEM)/filecalls.o arch/filecommon.o \
-    arch/ArcemConfig.o arch/cp15.o arch/newsound.o arch/displaydev.o \
+    arch/ArcemConfig.o arch/cp15.o arch/sounddev.o arch/displaydev.o \
     libs/inih/ini.o
 
 SRCS = armcopro.c armemu.c arminit.c arch/armarc.c \
@@ -97,7 +97,7 @@ SRCS = armcopro.c armemu.c arminit.c arch/armarc.c \
 	$(SYSTEM)/DispKbd.c arch/i2c.c arch/archio.c \
 	arch/fdc1772.c $(SYSTEM)/ControlPane.c arch/hdc63463.c \
 	arch/keyboard.c $(SYSTEM)/filecalls.c \
-	arch/ArcemConfig.c arch/cp15.c arch/newsound.c \
+	arch/ArcemConfig.c arch/cp15.c arch/sounddev.c \
 	arch/displaydev.c arch/filecommon.c \
 	libs/inih/ini.c
 
@@ -346,8 +346,8 @@ $(SYSTEM)/ControlPane.o: $(SYSTEM)/ControlPane.c arch/ControlPane.h \
 arch/keyboard.o: arch/keyboard.c arch/keyboard.h
 	$(CC) $(CFLAGS) -c $*.c -o arch/keyboard.o
 
-arch/newsound.o: arch/newsound.c arch/sound.h
-	$(CC) $(CFLAGS) -c $*.c -o arch/newsound.o
+arch/sounddev.o: arch/sounddev.c arch/sound.h
+	$(CC) $(CFLAGS) -c $*.c -o arch/sounddev.o
 
 arch/displaydev.o: arch/displaydev.c arch/displaydev.h
 	$(CC) $(CFLAGS) -c $*.c -o arch/displaydev.o

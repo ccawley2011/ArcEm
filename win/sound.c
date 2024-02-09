@@ -1,6 +1,8 @@
 #include "win.h"
 #include "../armdefs.h"
 #include "../arch/sound.h"
+#include "../arch/ControlPane.h"
+#include "../arch/dbugsys.h"
 #include "../arch/displaydev.h"
 
 #include <stdio.h>
@@ -8,9 +10,21 @@
 #include <windows.h>
 #include <mmsystem.h>
 
+#include "../armemu.h"
+
+#define SSD_Name(x) ssd_ ## x
+#define SSD_SoundData int16_t
+
 HWAVEOUT hWaveOut;
 
-SoundData sound_buffer[256*2]; /* Must be >= 2*Sound_BatchSize! */
+SSD_SoundData sound_buffer[256*2]; /* Must be >= 2*Sound_BatchSize! */
+
+static SSD_SoundData *SSD_Name(GetHostBuffer)(ARMul_State *state,int32_t *destavail);
+static void SSD_Name(HostBuffered)(ARMul_State *state,SSD_SoundData *buffer, int32_t numSamples);
+static int SSD_Name(InitHost)(ARMul_State *state);
+static void SSD_Name(QuitHost)(ARMul_State *state);
+
+#include "stdsounddev.c"
 
 /*
  * some good values for block size and count
@@ -37,17 +51,17 @@ static void CALLBACK sound_callback(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstanc
 	LeaveCriticalSection(&waveCriticalSection);
 }
 
-SoundData *Sound_GetHostBuffer(int32_t *destavail)
+static SSD_SoundData *SSD_Name(GetHostBuffer)(ARMul_State *state,int32_t *destavail)
 {
 	/* Just assume we always have enough space for the max batch size */
-	*destavail = sizeof(sound_buffer)/(sizeof(SoundData)*2);
+	*destavail = sizeof(sound_buffer)/(sizeof(SSD_SoundData)*2);
 	return sound_buffer;
 }
 
-void Sound_HostBuffered(SoundData *buffer,int32_t numSamples)
+static void SSD_Name(HostBuffered)(ARMul_State *state,SSD_SoundData *buffer,int32_t numSamples)
 {
 	LPSTR lpbuffer = (LPSTR)buffer;
-	DWORD_PTR size = numSamples * 2 * sizeof(SoundData);
+	DWORD_PTR size = numSamples * 2 * sizeof(SSD_SoundData);
 
 	WAVEHDR* current;
 	DWORD_PTR remain;
@@ -91,8 +105,7 @@ void Sound_HostBuffered(SoundData *buffer,int32_t numSamples)
 	}
 }
 
-int
-Sound_InitHost(ARMul_State *state)
+static int SSD_Name(InitHost)(ARMul_State *state)
 {
 	WAVEFORMATEX format;
 	char* buffer;
@@ -130,16 +143,16 @@ Sound_InitHost(ARMul_State *state)
 	}
 
 	/* TODO - Tweak these as necessary */
-	eSound_StereoSense = Stereo_LeftRight;
+	SI.StereoSense = Stereo_LeftRight;
 
-	Sound_BatchSize = 256;
+	SI.BatchSize = 256;
 
-	Sound_HostRate = format.nSamplesPerSec<<10;
+	SI.HostRate = format.nSamplesPerSec<<10;
 
 	return 0;
 }
 
-void sound_exit(void)
+static void SSD_Name(QuitHost)(ARMul_State *state)
 {
 	int i;
 
@@ -153,4 +166,12 @@ void sound_exit(void)
 	DeleteCriticalSection(&waveCriticalSection);
 	HeapFree(GetProcessHeap(), 0, waveBlocks);
 	waveOutClose(hWaveOut);
+}
+
+/*-----------------------------------------------------------------------------*/
+int
+SoundDev_Init(ARMul_State *state)
+{
+	/* Setup sound device */
+	return SoundDev_Set(state, &SSD_SoundDev);
 }

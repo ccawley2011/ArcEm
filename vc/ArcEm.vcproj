@@ -474,7 +474,7 @@
 				>
 			</File>
 			<File
-				RelativePath="..\arch\newsound.c"
+				RelativePath="..\arch\sounddev.c"
 				>
 			</File>
 			<File

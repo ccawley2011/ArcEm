@@ -353,7 +353,7 @@ ARMul_MemoryInit(ARMul_State *state)
     ControlPane_Error(EXIT_FAILURE,"Could not initialise display - exiting\n");
   }
 
-  if (Sound_Init(state)) {
+  if (SoundDev_Init(state)) {
     /* There was an error of some sort - it will already have been reported */
     ControlPane_Error(EXIT_FAILURE,"Could not initialise sound output - exiting\n");
   }

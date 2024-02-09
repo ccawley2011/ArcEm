@@ -11,8 +11,13 @@
 
 #include "../armdefs.h"
 #include "../arch/sound.h"
+#include "../arch/ControlPane.h"
+#include "../arch/dbugsys.h"
 #include "../arch/displaydev.h"
 #include "../armemu.h"
+
+#define SSD_Name(x) ssd_ ## x
+#define SSD_SoundData int16_t
 
 static uint32_t format = AFMT_S16_LE;
 static uint32_t channels = 2;
@@ -30,15 +35,22 @@ static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 
 #define BUFFER_SAMPLES (16384) /* 8K stereo pairs */
 
-SoundData sound_buffer[BUFFER_SAMPLES];
+SSD_SoundData sound_buffer[BUFFER_SAMPLES];
 volatile int32_t sound_buffer_in=BUFFER_SAMPLES; /* Number of samples we've placed in the buffer */
 volatile int32_t sound_buffer_out=0; /* Number of samples read out by the sound thread */
 static const int32_t sound_buff_mask=BUFFER_SAMPLES-1;
 #else
-SoundData sound_buffer[256*2]; /* Must be >= 2*Sound_BatchSize! */
+SSD_SoundData sound_buffer[256*2]; /* Must be >= 2*Sound_BatchSize! */
 #endif
 
-SoundData *Sound_GetHostBuffer(int32_t *destavail)
+static SSD_SoundData *SSD_Name(GetHostBuffer)(ARMul_State *state,int32_t *destavail);
+static void SSD_Name(HostBuffered)(ARMul_State *state,SSD_SoundData *buffer, int32_t numSamples);
+static int SSD_Name(InitHost)(ARMul_State *state);
+static void SSD_Name(QuitHost)(ARMul_State *state);
+
+#include "stdsounddev.c"
+
+static SSD_SoundData *SSD_Name(GetHostBuffer)(ARMul_State *state,int32_t *destavail)
 {
 #ifdef SOUND_THREAD
   /* Work out how much space is available until next wrap point, or we start overwriting data */
@@ -52,12 +64,12 @@ SoundData *Sound_GetHostBuffer(int32_t *destavail)
   return sound_buffer + ofs;
 #else
   /* Just assume we always have enough space for the max batch size */
-  *destavail = sizeof(sound_buffer)/(sizeof(SoundData)*2);
+  *destavail = sizeof(sound_buffer)/(sizeof(SSD_SoundData)*2);
   return sound_buffer;
 #endif
 }
 
-void Sound_HostBuffered(SoundData *buffer,int32_t numSamples)
+static void SSD_Name(HostBuffered)(ARMul_State *state,SSD_SoundData *buffer, int32_t numSamples)
 {
   numSamples <<= 1;
 #ifdef SOUND_THREAD
@@ -72,31 +84,31 @@ void Sound_HostBuffered(SoundData *buffer,int32_t numSamples)
   if(buffree == numSamples)
   {
     fprintf(stderr,"*** sound overflow! ***\n");
-    if(Sound_FudgeRate < -10)
-      Sound_FudgeRate = Sound_FudgeRate/2;
+    if(SI.FudgeRate < -10)
+      SI.FudgeRate = SI.FudgeRate/2;
     else
-      Sound_FudgeRate+=10;
+      SI.FudgeRate+=10;
   }
   else if(!used)
   {
     fprintf(stderr,"*** sound underflow! ***\n");
-    if(Sound_FudgeRate > 10)
-      Sound_FudgeRate = Sound_FudgeRate/2;
+    if(SI.FudgeRate > 10)
+      SI.FudgeRate = SI.FudgeRate/2;
     else
-      Sound_FudgeRate-=10;
+      SI.FudgeRate-=10;
   }
   else if(used < BUFFER_SAMPLES/4)
   {
-    Sound_FudgeRate--;
+    SI.FudgeRate--;
   }
   else if(buffree < BUFFER_SAMPLES/4)
   {
-    Sound_FudgeRate++;
+    SI.FudgeRate++;
   }
-  else if(Sound_FudgeRate)
+  else if(SI.FudgeRate)
   {
     /* Bring the fudge value back towards 0 until we go out of the comfort zone */
-    Sound_FudgeRate += (Sound_FudgeRate>0?-1:1);
+    SI.FudgeRate += (SI.FudgeRate>0?-1:1);
   }
 
   pthread_mutex_lock(&mut);
@@ -113,43 +125,43 @@ void Sound_HostBuffered(SoundData *buffer,int32_t numSamples)
        explicitly set the buffer size, so we're at the mercy of the sound system
        in terms of how much lag there'll be */
     int32_t bufsize = buf.fragsize*buf.fragstotal;
-    int32_t buffree = buf.bytes/sizeof(SoundData);
-    int32_t used = (bufsize-buf.bytes)/sizeof(SoundData);
-    int32_t stepsize = Sound_DMARate>>2;
-    bufsize /= sizeof(SoundData);
+    int32_t buffree = buf.bytes/sizeof(SSD_SoundData);
+    int32_t used = (bufsize-buf.bytes)/sizeof(SSD_SoundData);
+    int32_t stepsize = SI.DMARate>>2;
+    bufsize /= sizeof(SSD_SoundData);
     if(numSamples > buffree)
     {
-      fprintf(stderr,"*** sound overflow! %d %d %d %d ***\n",numSamples-buffree,ARMul_EmuRate,Sound_FudgeRate,Sound_DMARate);
+      fprintf(stderr,"*** sound overflow! %d %d %d %d ***\n",numSamples-buffree,ARMul_EmuRate,SI.FudgeRate,SI.DMARate);
       numSamples = buffree; /* We could block until space is available, but I'm woried we'd get stuck blocking forever because the FudgeRate increase wouldn't compensate for the ARMul cycles lost due to blocking */
-      if(Sound_FudgeRate < -stepsize)
-        Sound_FudgeRate = Sound_FudgeRate/2;
+      if(SI.FudgeRate < -stepsize)
+        SI.FudgeRate = SI.FudgeRate/2;
       else
-        Sound_FudgeRate+=stepsize;
+        SI.FudgeRate+=stepsize;
     }
     else if(!used)
     {
-      fprintf(stderr,"*** sound underflow! %d %d %d ***\n",ARMul_EmuRate,Sound_FudgeRate,Sound_DMARate);
-      if(Sound_FudgeRate > stepsize)
-        Sound_FudgeRate = Sound_FudgeRate/2;
+      fprintf(stderr,"*** sound underflow! %d %d %d ***\n",ARMul_EmuRate,SI.FudgeRate,SI.DMARate);
+      if(SI.FudgeRate > stepsize)
+        SI.FudgeRate = SI.FudgeRate/2;
       else
-        Sound_FudgeRate-=stepsize;
+        SI.FudgeRate-=stepsize;
     }
     else if(used < bufsize/4)
     {
-      Sound_FudgeRate-=stepsize>>4;
+      SI.FudgeRate-=stepsize>>4;
     }
     else if(buffree < bufsize/4)
     {
-      Sound_FudgeRate+=stepsize>>4;
+      SI.FudgeRate+=stepsize>>4;
     }
-    else if(Sound_FudgeRate)
+    else if(SI.FudgeRate)
     {
       /* Bring the fudge value back towards 0 until we go out of the comfort zone */
-      Sound_FudgeRate += (Sound_FudgeRate>0?-1:1);
+      SI.FudgeRate += (SI.FudgeRate>0?-1:1);
     }
   }
   
-  write(soundDevice,buffer,numSamples*sizeof(SoundData));
+  write(soundDevice,buffer,numSamples*sizeof(SSD_SoundData));
 #endif
 }
 
@@ -176,7 +188,7 @@ sound_writeThread(void *arg)
       }
 
       write(soundDevice, sound_buffer + ofs,
-            avail * sizeof(SoundData));
+            avail * sizeof(SSD_SoundData));
 
       local_buffer_out += avail;
     } else {
@@ -190,8 +202,7 @@ sound_writeThread(void *arg)
 }
 #endif
 
-int
-Sound_InitHost(ARMul_State *state)
+static int SSD_Name(InitHost)(ARMul_State *state)
 {
   if ((soundDevice = open("/dev/dsp", O_WRONLY )) < 0) {
     fprintf(stderr, "Could not open audio device /dev/dsp\n");
@@ -236,16 +247,29 @@ Sound_InitHost(ARMul_State *state)
   }
   fprintf(stderr,"Sound buffer params: frags %d total %d size %d bytes %d\n",buf.fragments,buf.fragstotal,buf.fragsize,buf.bytes);
 
-  eSound_StereoSense = Stereo_LeftRight;
+  SI.StereoSense = Stereo_LeftRight;
 
   /* Use a decent batch size */
-  Sound_BatchSize = 256;
+  SI.BatchSize = 256;
 
-  Sound_HostRate = sampleRate<<10;
+  SI.HostRate = sampleRate<<10;
 
 #ifdef SOUND_THREAD
   pthread_create(&thread, NULL, sound_writeThread, 0);
 #endif
 
   return 0;
+}
+
+static void SSD_Name(QuitHost)(ARMul_State *state)
+{
+  /* TODO */
+}
+
+/*-----------------------------------------------------------------------------*/
+int
+SoundDev_Init(ARMul_State *state)
+{
+	/* Setup sound device */
+	return SoundDev_Set(state, &SSD_SoundDev);
 }

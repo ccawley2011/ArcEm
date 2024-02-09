@@ -21,12 +21,18 @@
 #include <time.h>
 
 #include "../armdefs.h"
+#include "../armemu.h"
 #include "../arch/sound.h"
 #include "../arch/archio.h"
+#include "../arch/ControlPane.h"
+#include "../arch/dbugsys.h"
 #include "../arch/displaydev.h"
 
 #include "kernel.h"
 #include "swis.h"
+
+#define SSD_Name(x) ssd_ ## x
+#define SSD_SoundData int16_t
 
 /* SharedSound SWI numbers */
 #define SharedSound_InstallHandler	0x4B440
@@ -37,7 +43,7 @@ int sound_handler_id=0; /* ID of our sound handler (0 if uninstalled) */
 
 #define BUFFER_SAMPLES (32768) /* 16K stereo pairs */
 
-SoundData sound_buffer[BUFFER_SAMPLES];
+SSD_SoundData sound_buffer[BUFFER_SAMPLES];
 volatile int sound_buffer_in=BUFFER_SAMPLES; /* Number of samples we've placed in the buffer */
 volatile int sound_buffer_out=0; /* Number of samples read out by the IRQ routine */
 int sound_buff_mask=BUFFER_SAMPLES-1; /* For benefit of assembler code */
@@ -47,6 +53,13 @@ static float buffer_seconds = 0.2f; /* How much audio we want to try and keep bu
 
 extern void buffer_fill(void); /* Assembler function for performing the buffer fills */
 extern void error_handler(void); /* Assembler function attached to ErrorV */
+
+static SSD_SoundData *SSD_Name(GetHostBuffer)(ARMul_State *state,int32_t *destavail);
+static void SSD_Name(HostBuffered)(ARMul_State *state,SSD_SoundData *buffer, int32_t numSamples);
+static int SSD_Name(InitHost)(ARMul_State *state);
+static void SSD_Name(QuitHost)(ARMul_State *state);
+
+#include "stdsounddev.c"
 
 static void shutdown_sharedsound(void);
 
@@ -88,7 +101,7 @@ static void sigfunc(int sig)
 	exit(0);
 }
 
-static int init_sharedsound(void)
+static int init_sharedsound(ARMul_State *state)
 {
 	/* Try to register sharedsound handler, return nonzero on failure */
 	_kernel_swi_regs regs;
@@ -150,17 +163,17 @@ static int init_sharedsound(void)
 	_kernel_swi(OS_Claim,&regs,&regs);
 #endif
 	/* Get our sample rate */
-	_swix(SharedSound_SampleRate,_INR(0,1)|_OUT(1),sound_handler_id,0,&Sound_HostRate);
+	_swix(SharedSound_SampleRate,_INR(0,1)|_OUT(1),sound_handler_id,0,&SI.HostRate);
 	/* Calculate the buffer threshold value
 	   This is the low threshold value, so we divide by 512 to get the desired level, then by two again to get the low level */
-	buffer_threshold = ((int)(buffer_seconds*((float)Sound_HostRate)))>>10;
+	buffer_threshold = ((int)(buffer_seconds*((float)SI.HostRate)))>>10;
 	/* Low thresholds may cause issues */
-	if(buffer_threshold<Sound_BatchSize*4)
-		buffer_threshold = Sound_BatchSize*4;
+	if(buffer_threshold<SI.BatchSize*4)
+		buffer_threshold = SI.BatchSize*4;
 	/* Big thresholds will cause problems too! */
 	if(buffer_threshold*4 > BUFFER_SAMPLES)
 		buffer_threshold = BUFFER_SAMPLES>>2;
-	fprintf(stderr,"Host audio rate %dHz, using buffer threshold %d\n",Sound_HostRate>>10,buffer_threshold);
+	fprintf(stderr,"Host audio rate %dHz, using buffer threshold %d\n",SI.HostRate>>10,buffer_threshold);
 	return 0;
 }                           
 
@@ -181,19 +194,19 @@ static void shutdown_sharedsound(void)
 	_kernel_swi(OS_Release,&regs,&regs); 
 }
 
-int Sound_InitHost(ARMul_State *state)
+static int SSD_Name(InitHost)(ARMul_State *state)
 {
   /* We want the right channel first */
-  eSound_StereoSense = Stereo_RightLeft;
+  SI.StereoSense = Stereo_RightLeft;
 
   /* Use a decent batch size */
-  Sound_BatchSize = 256;
+  SI.BatchSize = 256;
 
   /* Default 20833Hz sample rate if no SharedSound? */
-  Sound_HostRate = (1000000<<10)/48;
+  SI.HostRate = (1000000<<10)/48;
 
 #ifndef PROFILE_ENABLED
-  if (init_sharedsound())
+  if (init_sharedsound(state))
   {
     fprintf(stderr,"Error: Couldn't register sound handler\n");
     return -1;
@@ -203,7 +216,12 @@ int Sound_InitHost(ARMul_State *state)
   return 0;
 }
 
-SoundData *Sound_GetHostBuffer(int32_t *destavail)
+static void SSD_Name(QuitHost)(ARMul_State *state)
+{
+  shutdown_sharedsound();
+}
+
+static SSD_SoundData *SSD_Name(GetHostBuffer)(ARMul_State *state,int32_t *destavail)
 {
   /* Work out how much space is available until next wrap point, or we start overwriting data */
   if(!sound_handler_id)
@@ -218,7 +236,7 @@ SoundData *Sound_GetHostBuffer(int32_t *destavail)
   return sound_buffer + ofs;
 }
 
-void Sound_HostBuffered(SoundData *buffer,int32_t numSamples)
+static void SSD_Name(HostBuffered)(ARMul_State *state,SSD_SoundData *buffer,int32_t numSamples)
 {
   if(!sound_handler_id)
     return;
@@ -233,30 +251,38 @@ void Sound_HostBuffered(SoundData *buffer,int32_t numSamples)
   if(buffree == numSamples)
   {
     fprintf(stderr,"*** sound overflow! ***\n");
-    if(Sound_FudgeRate < -10)
-      Sound_FudgeRate = Sound_FudgeRate/2;
+    if(SI.FudgeRate < -10)
+      SI.FudgeRate = SI.FudgeRate/2;
     else
-      Sound_FudgeRate+=10;
+      SI.FudgeRate+=10;
   }
   else if(!used)
   {
     fprintf(stderr,"*** sound underflow! ***\n");
-    if(Sound_FudgeRate > 10)
-      Sound_FudgeRate = Sound_FudgeRate/2;
+    if(SI.FudgeRate > 10)
+      SI.FudgeRate = SI.FudgeRate/2;
     else
-      Sound_FudgeRate-=10;
+      SI.FudgeRate-=10;
   }
   else if(used < buffer_threshold)
   {
-    Sound_FudgeRate-=3;
+    SI.FudgeRate-=3;
   }
   else if(used < buffer_threshold*3)
   {
-    Sound_FudgeRate+=3;
+    SI.FudgeRate+=3;
   }
-  else if(Sound_FudgeRate)
+  else if(SI.FudgeRate)
   {
     /* Bring the fudge value back towards 0 until we go out of the comfort zone */
-    Sound_FudgeRate += (Sound_FudgeRate>0?-1:1);
+    SI.FudgeRate += (SI.FudgeRate>0?-1:1);
   }
+}
+
+/*-----------------------------------------------------------------------------*/
+int
+SoundDev_Init(ARMul_State *state)
+{
+  /* Setup sound device */
+  return SoundDev_Set(state, &SSD_SoundDev);
 }

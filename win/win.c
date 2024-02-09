@@ -280,9 +280,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 
     case WM_DESTROY:
-#ifdef SOUND_SUPPORT
-      sound_exit();
-#endif
+      SoundDev_Set(state, NULL);
       PostQuitMessage(0);
       exit(0);
       break;

@@ -1,5 +1,5 @@
 /*
-  arch/newsound.c
+  arch/stdsounddev.c
 
   (c) 2011 Jeffrey Lee <me@phlamethrower.co.uk>
   Based on original sound code by Daniel Clarke
@@ -8,52 +8,41 @@
   for details.
 
   This is the core of the sound system and is used to drive the platform-specifc
-  frontend code. At invtervals approximating the correct DMA interval, data is
+  frontend code. At intervals approximating the correct DMA interval, data is
   fetched from memory and converted from the Arc 8-bit log format to 16-bit
   linear. The sample stream is then downmixed in a manner that roughly
   approximates the behaviour of the hardware, in order to convert the N-channel
   source data to a single stereo stream. The converted data is then fed to the
   platform code for output to the sound hardware.
-
-  Even if SOUND_SUPPORT is disabled, this code will still request data from the
-  core at the correct intervals, so emulated code that relies on sound IRQs
-  should run correctly.
 */
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "../armdefs.h"
-#include "arch/armarc.h"
-#include "arch/dbugsys.h"
-#include "arch/sound.h"
-#include "../armemu.h"
-#include "displaydev.h"
 
 #define MAX_BATCH_SIZE 1024
 
-int Sound_BatchSize = 1; /* How many 16*2 sample batches to try to do at once */
-CycleCount Sound_DMARate; /* How many cycles between DMA fetches */
-Sound_StereoSense eSound_StereoSense = Stereo_LeftRight;
-CycleDiff Sound_FudgeRate = 0;
+struct SSD_Name(SoundInfo) {
+    int BatchSize; /* How many 16*2 sample batches to attempt to deliver to the platform code at once */
+    CycleCount DMARate; /* How many cycles between DMA fetches */
+    Sound_StereoSense StereoSense;
+    CycleDiff FudgeRate; /* Extra fudge factor applied to Sound_DMARate */
 
-#ifdef SOUND_SUPPORT
-uint32_t Sound_HostRate; /* Rate of host sound system, in 1/1024 Hz */
+    uint32_t HostRate; /* Rate of host sound system, in 1/1024 Hz. Must be set by host on init. */
 
+    SSD_SoundData soundTable[256];
+    ARMword channelAmount[8][2];
 
-static SoundData soundTable[256];
-static ARMword channelAmount[8][2];
-
-static SoundData soundBuffer[16*2*MAX_BATCH_SIZE];
-static uint32_t soundBufferAmt=0; /* Number of stereo pairs buffered */
+    SSD_SoundData soundBuffer[16*2*MAX_BATCH_SIZE];
+    uint32_t soundBufferAmt; /* Number of stereo pairs buffered */
 #define TIMESHIFT 9 /* Bigger values make the mixing more accurate. But 9 is the biggest value possible to avoid overflows in the 32bit accumulators. */
-static uint32_t soundTime=0; /* Offset into 1st sample pair of buffer */
-static uint32_t soundTimeStep; /* How many source samples per dest sample, fixed point with TIMESHIFT fraction bits */
-static uint32_t soundScale; /* Output scale factor, 16.16 fixed point */
-#endif
+    uint32_t soundTime; /* Offset into 1st sample pair of buffer */
+    uint32_t soundTimeStep; /* How many source samples per dest sample, fixed point with TIMESHIFT fraction bits */
+    uint32_t soundScale; /* Output scale factor, 16.16 fixed point */
+};
 
-void Sound_UpdateDMARate(ARMul_State *state)
+#ifdef SI
+#undef SI
+#endif
+#define SI (*((struct SSD_Name(SoundInfo) *) state->Sound))
+
+static void SSD_Name(UpdateDMARate)(ARMul_State *state)
 {
   /* Calculate a new value for how often we should trigger a sound DMA fetch
      Relies on:
@@ -70,15 +59,13 @@ void Sound_UpdateDMARate(ARMul_State *state)
   oldioebcr = ioc.IOEBControlReg;
   /* DMA fetches 16 bytes, at a rate of 1000000/(16*(VIDC.SoundFreq+2)) Hz, for a 24MHz VIDC clock
      So for a variable clock, and taking into account ARMul_EmuRate, we get:
-     Sound_DMARate = ARMul_EmuRate*16*(VIDC.SoundFreq+2)*24/VIDC_clk
+     SI.DMARate = ARMul_EmuRate*16*(VIDC.SoundFreq+2)*24/VIDC_clk
  */
-  Sound_DMARate = (((uint64_t) ARMul_EmuRate)*(16*24)*(VIDC.SoundFreq+2))/DisplayDev_GetVIDCClockIn();
-//  warn_vidc("UpdateDMARate: f %d r %u -> %u\n",VIDC.SoundFreq,ARMul_EmuRate,Sound_DMARate);
+  SI.DMARate = (((uint64_t) ARMul_EmuRate)*(16*24)*(VIDC.SoundFreq+2))/DisplayDev_GetVIDCClockIn();
+//  warn_vidc("UpdateDMARate: f %d r %u -> %u\n",VIDC.SoundFreq,ARMul_EmuRate,SI.DMARate);
 }
 
-#ifdef SOUND_SUPPORT
-static void
-SoundInitTable(void)
+static void SSD_Name(InitTable)(ARMul_State *state)
 {
   unsigned i;
 
@@ -136,72 +123,65 @@ SoundInitTable(void)
     sample = chordBase + stepSize * pointSelect;
 
     if (sign == 1) { /* negative */
-      soundTable[i] = -sample;
+      SI.soundTable[i] = -sample;
     } else {
-      soundTable[i] = sample;
+      SI.soundTable[i] = sample;
     }
   }
 }
 
-/**
- * Sound_StereoUpdated
- *
- * Called whenever VIDC stereo image registers are written so that the
- * channelAmount array can be recalculated and the new number of channels can
- * be figured out.
- */
-void Sound_StereoUpdated(ARMul_State *state)
+static void SSD_Name(StereoUpdated)(ARMul_State *state)
 {
   int i = 0;
 
   for (i = 0; i < 8; i++) {
     uint8_t reg = VIDC.StereoImageReg[i];
-    if(eSound_StereoSense == Stereo_RightLeft)
+    if(SI.StereoSense == Stereo_RightLeft)
       reg = 8-reg; /* Swap stereo */
     switch (reg) {
       /* Centre */
-      case 4: channelAmount[i][0] = (ARMword) (0.5*65536);
-              channelAmount[i][1] = (ARMword) (0.5*65536);
+      case 4: SI.channelAmount[i][0] = (ARMword) (0.5*65536);
+              SI.channelAmount[i][1] = (ARMword) (0.5*65536);
               break;
 
       /* Left 100% */
-      case 1: channelAmount[i][0] = (ARMword) (1.0*65536);
-              channelAmount[i][1] = (ARMword) (0.0*65536);
+      case 1: SI.channelAmount[i][0] = (ARMword) (1.0*65536);
+              SI.channelAmount[i][1] = (ARMword) (0.0*65536);
               break;
       /* Left 83% */
-      case 2: channelAmount[i][0] = (ARMword) (0.83*65536);
-              channelAmount[i][1] = (ARMword) (0.17*65536);
+      case 2: SI.channelAmount[i][0] = (ARMword) (0.83*65536);
+              SI.channelAmount[i][1] = (ARMword) (0.17*65536);
               break;
       /* Left 67% */
-      case 3: channelAmount[i][0] = (ARMword) (0.67*65536);
-              channelAmount[i][1] = (ARMword) (0.33*65536);
+      case 3: SI.channelAmount[i][0] = (ARMword) (0.67*65536);
+              SI.channelAmount[i][1] = (ARMword) (0.33*65536);
               break;
 
       /* Right 100% */
-      case 7: channelAmount[i][1] = (ARMword) (1.0*65536);
-              channelAmount[i][0] = (ARMword) (0.0*65536);
+      case 7: SI.channelAmount[i][1] = (ARMword) (1.0*65536);
+              SI.channelAmount[i][0] = (ARMword) (0.0*65536);
               break;
       /* Right 83% */
-      case 6: channelAmount[i][1] = (ARMword) (0.83*65536);
-              channelAmount[i][0] = (ARMword) (0.17*65536);
+      case 6: SI.channelAmount[i][1] = (ARMword) (0.83*65536);
+              SI.channelAmount[i][0] = (ARMword) (0.17*65536);
               break;
       /* Right 67% */
-      case 5: channelAmount[i][1] = (ARMword) (0.67*65536);
-              channelAmount[i][0] = (ARMword) (0.33*65536);
+      case 5: SI.channelAmount[i][1] = (ARMword) (0.67*65536);
+              SI.channelAmount[i][0] = (ARMword) (0.33*65536);
               break;
 
       /* Bad setting - just mute it */
-      default: channelAmount[i][0] = channelAmount[i][1] = 0;
+      default: SI.channelAmount[i][0] = SI.channelAmount[i][1] = 0;
     }
   }
 }
 
-void Sound_SoundFreqUpdated(ARMul_State *state)
+static void SSD_Name(SoundFreqUpdated)(ARMul_State *state)
 {
   /* Do nothing for now */
 }
 
-static void Sound_Log2Lin(const uint8_t *in,SoundData *out,int32_t avail)
+static void SSD_Name(Log2Lin)(ARMul_State *state, const uint8_t *in,SSD_SoundData *out,int32_t avail)
 {
   /* Convert the source log data to linear. Note that no mixing is done here. */
   avail *= 2;
@@ -211,44 +191,44 @@ static void Sound_Log2Lin(const uint8_t *in,SoundData *out,int32_t avail)
     /* Byte accesses must be endian swapped.
        This makes sure the stereo positions are correct, and that the samples
        come through in the right order for the mixing algorithm to work. */
-    SoundData val0 = soundTable[in[3]];
-    SoundData val1 = soundTable[in[2]];
-    SoundData val2 = soundTable[in[1]];
-    SoundData val3 = soundTable[in[0]];
-    *out++ = (channelAmount[0][0] * val0)>>16;
-    *out++ = (channelAmount[0][1] * val0)>>16;
-    *out++ = (channelAmount[1][0] * val1)>>16;
-    *out++ = (channelAmount[1][1] * val1)>>16;
-    *out++ = (channelAmount[2][0] * val2)>>16;
-    *out++ = (channelAmount[2][1] * val2)>>16;
-    *out++ = (channelAmount[3][0] * val3)>>16;
-    *out++ = (channelAmount[3][1] * val3)>>16;
-    val0 = soundTable[in[7]];
-    val1 = soundTable[in[6]];
-    val2 = soundTable[in[5]];
-    val3 = soundTable[in[4]];
-    *out++ = (channelAmount[4][0] * val0)>>16;
-    *out++ = (channelAmount[4][1] * val0)>>16;
-    *out++ = (channelAmount[5][0] * val1)>>16;
-    *out++ = (channelAmount[5][1] * val1)>>16;
-    *out++ = (channelAmount[6][0] * val2)>>16;
-    *out++ = (channelAmount[6][1] * val2)>>16;
-    *out++ = (channelAmount[7][0] * val3)>>16;
-    *out++ = (channelAmount[7][1] * val3)>>16;
+    SSD_SoundData val0 = SI.soundTable[in[3]];
+    SSD_SoundData val1 = SI.soundTable[in[2]];
+    SSD_SoundData val2 = SI.soundTable[in[1]];
+    SSD_SoundData val3 = SI.soundTable[in[0]];
+    *out++ = (SI.channelAmount[0][0] * val0)>>16;
+    *out++ = (SI.channelAmount[0][1] * val0)>>16;
+    *out++ = (SI.channelAmount[1][0] * val1)>>16;
+    *out++ = (SI.channelAmount[1][1] * val1)>>16;
+    *out++ = (SI.channelAmount[2][0] * val2)>>16;
+    *out++ = (SI.channelAmount[2][1] * val2)>>16;
+    *out++ = (SI.channelAmount[3][0] * val3)>>16;
+    *out++ = (SI.channelAmount[3][1] * val3)>>16;
+    val0 = SI.soundTable[in[7]];
+    val1 = SI.soundTable[in[6]];
+    val2 = SI.soundTable[in[5]];
+    val3 = SI.soundTable[in[4]];
+    *out++ = (SI.channelAmount[4][0] * val0)>>16;
+    *out++ = (SI.channelAmount[4][1] * val0)>>16;
+    *out++ = (SI.channelAmount[5][0] * val1)>>16;
+    *out++ = (SI.channelAmount[5][1] * val1)>>16;
+    *out++ = (SI.channelAmount[6][0] * val2)>>16;
+    *out++ = (SI.channelAmount[6][1] * val2)>>16;
+    *out++ = (SI.channelAmount[7][0] * val3)>>16;
+    *out++ = (SI.channelAmount[7][1] * val3)>>16;
     in += 8;
 #else
     int i;
     for(i=0;i<8;i++)
     {
-      SoundData val = soundTable[*in++];
-      *out++ = (channelAmount[i][0] * val)>>16;
-      *out++ = (channelAmount[i][1] * val)>>16;
+      SSD_SoundData val = SI.soundTable[*in++];
+      *out++ = (SI.channelAmount[i][0] * val)>>16;
+      *out++ = (SI.channelAmount[i][1] * val)>>16;
     }
 #endif
   }
 }
 
-static int32_t Sound_Mix(SoundData *out,int32_t destavail)
+static int32_t SSD_Name(Mix)(ARMul_State *state,SSD_SoundData *out,int32_t destavail)
 {
   /* This mixing function performs two roles:
   
@@ -305,11 +285,11 @@ static int32_t Sound_Mix(SoundData *out,int32_t destavail)
      ticks (shifted by TIMESHIFT). 
   */
      
-  const SoundData *in = soundBuffer;
-  int32_t srcavail = soundBufferAmt;
-  uint32_t time = soundTime;
-  const int32_t timestep = soundTimeStep;
-  const uint32_t scale = soundScale;
+  const SSD_SoundData *in = SI.soundBuffer;
+  int32_t srcavail = SI.soundBufferAmt;
+  uint32_t time = SI.soundTime;
+  const int32_t timestep = SI.soundTimeStep;
+  const uint32_t scale = SI.soundScale;
 
   /* We can only generate a destination sample if all the required source
      samples are present. Bias the source sample count by a suitable amount
@@ -329,7 +309,7 @@ static int32_t Sound_Mix(SoundData *out,int32_t destavail)
     {
       int32_t lacc=0,racc=0;
       int32_t lacc2=0,racc2=0;
-      const SoundData *oldin = in;
+      const SSD_SoundData *oldin = in;
       int32_t amt = (1<<TIMESHIFT)-time;
       /* Calculate the sum of the first few samples
          'amt' is being used to store the contribution factor */ 
@@ -417,83 +397,76 @@ static int32_t Sound_Mix(SoundData *out,int32_t destavail)
 
   /* Update globals */
   srcavail += 10+(timestep>>TIMESHIFT);
-  memmove(soundBuffer,in,srcavail*sizeof(SoundData)*2); /* TODO - Improve this. Should only memmove() once we're near the end of the buffer. */
-  soundBufferAmt = srcavail;
-  soundTime = time;
+  memmove(SI.soundBuffer,in,srcavail*sizeof(SSD_SoundData)*2); /* TODO - Improve this. Should only memmove() once we're near the end of the buffer. */
+  SI.soundBufferAmt = srcavail;
+  SI.soundTime = time;
 
   /* Return remaining output space */
   return destavail;
 }
 
-static void Sound_DoMix(void)
+static void SSD_Name(DoMix)(ARMul_State *state)
 {
   int32_t destavail;
-  SoundData *out;
-  if(soundBufferAmt <= 10+(soundTimeStep>>TIMESHIFT))
+  SSD_SoundData *out;
+  if(SI.soundBufferAmt <= 10+(SI.soundTimeStep>>TIMESHIFT))
     return;
   /* Get host buffer params */
-  out = Sound_GetHostBuffer(&destavail);
+  out = SSD_Name(GetHostBuffer)(state,&destavail);
   if(destavail)
   {
     /* Mix into host buffer */
-    int32_t remain = Sound_Mix(out,destavail);
+    int32_t remain = SSD_Name(Mix)(state,out,destavail);
     /* Tell the host */
-    Sound_HostBuffered(out,destavail-remain);
+    SSD_Name(HostBuffered)(state,out,destavail-remain);
   }
 }
 
-static void Sound_Process(ARMul_State *state,int32_t avail)
+static void SSD_Name(Process)(ARMul_State *state,int32_t avail)
 {
   /* Recalc soundTimeStep */
   static uint8_t oldsoundfreq=0;
   static uint8_t oldioebcr=0;
   static uint32_t oldhostrate=0;
-  if((VIDC.SoundFreq != oldsoundfreq) || (ioc.IOEBControlReg != oldioebcr) || (Sound_HostRate != oldhostrate))
+  if((VIDC.SoundFreq != oldsoundfreq) || (ioc.IOEBControlReg != oldioebcr) || (SI.HostRate != oldhostrate))
   {
     uint32_t clockin;
     uint64_t a, b;
     oldsoundfreq = VIDC.SoundFreq;
     oldioebcr = ioc.IOEBControlReg;
-    oldhostrate = Sound_HostRate;
+    oldhostrate = SI.HostRate;
     /* Arc sample rate has most likely changed; process as much of the existing buffer as possible (using the current step values) */
-    Sound_DoMix();
+    SSD_Name(DoMix)(state);
     clockin = DisplayDev_GetVIDCClockIn();
     /* Arc sound runs at a rate of (clockin*1024)/(24*(VIDC.SoundFreq+2)) in 1/1024Hz units
-       We need that divided by Sound_HostRate, and the reciprocal */
+       We need that divided by SI.HostRate, and the reciprocal */
     a = ((uint64_t) clockin)*1024;
-    b = ((uint64_t) Sound_HostRate)*24*(VIDC.SoundFreq+2);
-    soundTimeStep = (uint32_t)((a<<TIMESHIFT)/b);
-    soundScale = (uint32_t)((b<<16)/a);
-    warn_vidc("New sample period %d (VIDC %dMHz) host %dHz -> timestep %08x scale %08x\n",VIDC.SoundFreq+2,clockin/1000000,Sound_HostRate>>10,soundTimeStep,soundScale);
-    soundTime = 0;
+    b = ((uint64_t) SI.HostRate)*24*(VIDC.SoundFreq+2);
+    SI.soundTimeStep = (uint32_t)((a<<TIMESHIFT)/b);
+    SI.soundScale = (uint32_t)((b<<16)/a);
+    warn_vidc("New sample period %d (VIDC %dMHz) host %dHz -> timestep %08x scale %08x\n",VIDC.SoundFreq+2,clockin/1000000,SI.HostRate>>10,SI.soundTimeStep,SI.soundScale);
+    SI.soundTime = 0;
   }
   if(avail)
   {
     /* Log -> lin conversion */
-    Sound_Log2Lin(((uint8_t *) MEMC.PhysRam) + MEMC.Sptr,soundBuffer+(soundBufferAmt<<1),avail);
-    soundBufferAmt += avail<<4;
+    SSD_Name(Log2Lin)(state,((uint8_t *) MEMC.PhysRam) + MEMC.Sptr,SI.soundBuffer+(SI.soundBufferAmt<<1),avail);
+    SI.soundBufferAmt += avail<<4;
   }
   /* Process this new data */
-  Sound_DoMix();
+  SSD_Name(DoMix)(state);
 }
-#endif /* SOUND_SUPPORT */
 
-static void Sound_DMAEvent(ARMul_State *state,CycleCount nowtime)
+static void SSD_Name(DMAEvent)(ARMul_State *state,CycleCount nowtime)
 {
   int32_t srcbatchsize, avail;
-#ifdef SOUND_SUPPORT
   int32_t bufspace;
-#endif
   CycleCount next;
-  Sound_UpdateDMARate(state);
-#ifdef SOUND_SUPPORT
-  /* Work out how many source samples are required to generate Sound_BatchSize dest samples */
-  srcbatchsize = (Sound_BatchSize*soundTimeStep)>>TIMESHIFT;
+  SSD_Name(UpdateDMARate)(state);
+  /* Work out how many source samples are required to generate SI.BatchSize dest samples */
+  srcbatchsize = (SI.BatchSize*SI.soundTimeStep)>>TIMESHIFT;
   if(!srcbatchsize)
     srcbatchsize = 1;
-#else
-  srcbatchsize = 4;
-#endif
   /* How many DMA fetches are possible? */
   avail = 0;
   if(MEMC.ControlReg & (1 << 11))
@@ -525,37 +498,66 @@ static void Sound_DMAEvent(ARMul_State *state,CycleCount nowtime)
     avail = ((MEMC.SendC+16)-MEMC.Sptr)>>4;
     if(avail > srcbatchsize)
       avail = srcbatchsize;
-#ifdef SOUND_SUPPORT
-    bufspace = (16*MAX_BATCH_SIZE-soundBufferAmt)>>4;
+    bufspace = (16*MAX_BATCH_SIZE-SI.soundBufferAmt)>>4;
     if(avail > bufspace)
       avail = bufspace;
-#endif 
   }
   /* Process data first, so host can adjust fudge rate */
-#ifdef SOUND_SUPPORT
-  Sound_Process(state,avail);
-#endif
+  SSD_Name(Process)(state,avail);
   /* Work out when to reschedule the event
      TODO - This is wrong; there's no guarantee the host accepted all the data we wanted to give him */
-  next = Sound_DMARate*(avail?avail:srcbatchsize)+Sound_FudgeRate;
+  next = SI.DMARate*(avail?avail:srcbatchsize)+SI.FudgeRate;
   /* Clamp to a safe minimum value */
   if(next < 100)
     next = 100;
-  EventQ_RescheduleHead(state,nowtime+next,Sound_DMAEvent);
+  EventQ_RescheduleHead(state,nowtime+next,SSD_Name(DMAEvent));
   /* Update DMA stuff */
   MEMC.Sptr += avail<<4;
 }
 
-int Sound_Init(ARMul_State *state)
+static int SSD_Name(Init)(ARMul_State *state)
 {
-#ifdef SOUND_SUPPORT
-  SoundInitTable();
-  Sound_UpdateDMARate(state);
-  EventQ_Insert(state,ARMul_Time+Sound_DMARate,Sound_DMAEvent);
-  return Sound_InitHost(state);
-#else
-  Sound_UpdateDMARate(state);
-  EventQ_Insert(state,ARMul_Time+Sound_DMARate,Sound_DMAEvent);
-  return 0;
-#endif
+  state->Sound = calloc(sizeof(struct SSD_Name(SoundInfo)),1);
+  if(!state->Sound) {
+    warn_vidc("Failed to allocate SoundInfo\n");
+    return -1;
+  }
+
+  SI.BatchSize = 1; /* How many 16*2 sample batches to try to do at once */
+  SI.StereoSense = Stereo_LeftRight;
+  SI.FudgeRate = 0;
+  SI.soundBufferAmt = 0; /* Number of stereo pairs buffered */
+  SI.soundTime = 0; /* Offset into 1st sample pair of buffer */
+
+  SSD_Name(InitTable)(state);
+  SSD_Name(UpdateDMARate)(state);
+  EventQ_Insert(state,ARMul_Time+SI.DMARate, SSD_Name(DMAEvent));
+  return SSD_Name(InitHost)(state);
 }
+
+static void SSD_Name(Shutdown)(ARMul_State *state)
+{
+  int idx = EventQ_Find(state,SSD_Name(DMAEvent));
+  if(idx >= 0)
+    EventQ_Remove(state,idx);
+  else
+  {
+    ControlPane_Error(EXIT_FAILURE,"Couldn't find SSD_Name(DMAEvent)!\n");
+  }
+  SSD_Name(QuitHost)(state);
+  free(state->Sound);
+  state->Sound = NULL;
+}
+
+const SoundDev SSD_SoundDev = {
+  SSD_Name(Init),
+  SSD_Name(Shutdown),
+  SSD_Name(SoundFreqUpdated),
+  SSD_Name(StereoUpdated),
+};
+
+/*
+
+  The end
+
+*/
