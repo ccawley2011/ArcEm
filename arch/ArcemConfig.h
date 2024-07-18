@@ -113,7 +113,7 @@ typedef struct ArcemConfig_s {
  *
  * @param pConfig The structure to fill in
  */
-extern void ArcemConfig_SetupDefaults(ArcemConfig *pConfig);
+extern bool ArcemConfig_SetupDefaults(ArcemConfig *pConfig);
 
 /**
  * ArcemConfig_ParseConfigFile
@@ -123,7 +123,7 @@ extern void ArcemConfig_SetupDefaults(ArcemConfig *pConfig);
  *
  * @param pConfig The structure to fill in
  */
-extern void ArcemConfig_ParseConfigFile(ArcemConfig* pConfig);
+extern bool ArcemConfig_ParseConfigFile(ArcemConfig* pConfig);
 
 /**
  * ArcemConfig_ParseCommandLine
@@ -137,4 +137,4 @@ extern void ArcemConfig_ParseConfigFile(ArcemConfig* pConfig);
  * @param argc Number of entries in argv
  * @param argv Array of char*'s represented space seperated commandline arguments
  */
-extern void ArcemConfig_ParseCommandLine(ArcemConfig* pConfig, int argc, char* argv[]);
+extern bool ArcemConfig_ParseCommandLine(ArcemConfig* pConfig, int argc, char* argv[]);

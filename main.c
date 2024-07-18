@@ -45,17 +45,21 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 #endif
 
   /* Setup the default values for the config system */
-  ArcemConfig_SetupDefaults(&hArcemConfig);
+  if (!ArcemConfig_SetupDefaults(&hArcemConfig))
+    return EXIT_FAILURE;
 
   /* Parse the config file to overrule the defaults */
-  ArcemConfig_ParseConfigFile(&hArcemConfig);
+  if (!ArcemConfig_ParseConfigFile(&hArcemConfig))
+    return EXIT_FAILURE;
 
   /* Parse any commandline arguments given to the program
      to overrule the defaults */
 #if defined(__GNUC__) && defined(__MINGW32__) && !defined(__MINGW64_VERSION_MAJOR)
-  ArcemConfig_ParseCommandLine(&hArcemConfig, _argc, _argv);
+  if (!ArcemConfig_ParseCommandLine(&hArcemConfig, _argc, _argv))
+    return EXIT_FAILURE;
 #else
-  ArcemConfig_ParseCommandLine(&hArcemConfig, __argc, __argv);
+  if (!ArcemConfig_ParseCommandLine(&hArcemConfig, __argc, __argv))
+    return EXIT_FAILURE;
 #endif
 
   dagstandalone(&hArcemConfig);
@@ -79,14 +83,17 @@ int main(int argc, char *argv[])
   Prof_Init();
   
   /* Setup the default values for the config system */
-  ArcemConfig_SetupDefaults(&hArcemConfig);
+  if (!ArcemConfig_SetupDefaults(&hArcemConfig))
+    return EXIT_FAILURE;
 
   /* Parse the config file to overrule the defaults */
-  ArcemConfig_ParseConfigFile(&hArcemConfig);
+  if (!ArcemConfig_ParseConfigFile(&hArcemConfig))
+    return EXIT_FAILURE;
 
   /* Parse any commandline arguments given to the program
      to overrule the defaults */
-  ArcemConfig_ParseCommandLine(&hArcemConfig, argc, argv);
+  if (!ArcemConfig_ParseCommandLine(&hArcemConfig, argc, argv))
+    return EXIT_FAILURE;
 
   dagstandalone(&hArcemConfig);
 
