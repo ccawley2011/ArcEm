@@ -17,14 +17,35 @@ void ControlPane_Init(ARMul_State *state)
 
 }
 
-void ControlPane_Error(int code,const char *fmt,...)
+void ControlPane_MessageBox(const char *fmt,...)
 {
-  /* Assume mode 28 is available */
-  _swix(OS_ScreenMode,_INR(0,1),0,28);
   char buf[1024];
   va_list args;
+
+  /* TODO: Handle message box requests once in full-screen */
+
   va_start(args,fmt);
   vsnprintf(buf,sizeof(buf),fmt,args);
+  va_end(args);
+
+  /* Log it */
+  fputs(buf,stderr);
+  /* Report error */
+  puts(buf);
+}
+
+void ControlPane_Error(int code,const char *fmt,...)
+{
+  char buf[1024];
+  va_list args;
+
+  /* Assume mode 28 is available */
+  _swix(OS_ScreenMode,_INR(0,1),0,28);
+
+  va_start(args,fmt);
+  vsnprintf(buf,sizeof(buf),fmt,args);
+  va_end(args);
+
   /* Log it */
   fputs(buf,stderr);
   /* Report error */

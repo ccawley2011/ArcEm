@@ -32,15 +32,15 @@ static void ami_easyrequest(const char *err)
 	}
 }
 
-void ControlPane_Error(int code,const char *fmt,...)
+void ControlPane_MessageBox(const char *fmt,...)
 {
   char err[100];
   va_list args;
+
   va_start(args,fmt);
-  /* Log it */
   vsnprintf(err, sizeof(err), fmt, args);
+  va_end(args);
+
+  /* Log it */
   ami_easyrequest(err);
-  
-  /* Quit */
-  exit(code);
 }

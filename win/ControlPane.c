@@ -17,15 +17,16 @@ void ControlPane_Init(ARMul_State *state)
 
 }
 
-void ControlPane_Error(int code,const char *fmt,...)
+void ControlPane_MessageBox(const char *fmt,...)
 {
   char err[100];
   va_list args;
+
   va_start(args,fmt);
-  /* Log it */
-  vfprintf(stderr,fmt,args);
   vsnprintf(err, sizeof(err), fmt, args);
+  va_end(args);
+
+  /* Log it */
+  fputs(err, stderr);
   MessageBoxA(NULL, err, "ArcEm", MB_ICONERROR);
-  /* Quit */
-  exit(code);
 }

@@ -17,7 +17,7 @@ void ControlPane_Init(ARMul_State *state)
 
 }
 
-void ControlPane_Error(int code,const char *fmt,...)
+void ControlPane_MessageBox(const char *fmt,...)
 {
 #if SDL_VERSION_ATLEAST(2, 0, 0)
   va_list args;
@@ -27,14 +27,15 @@ void ControlPane_Error(int code,const char *fmt,...)
   vsnprintf(err, sizeof(err), fmt, args);
   va_end(args);
 
-  SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "ArcEm", err, NULL);
+  /* Log it */
   fputs(err, stderr);
+  SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "ArcEm", err, NULL);
 #else
   va_list args;
-  va_start(args,fmt);
+
   /* Log it */
+  va_start(args,fmt);
   vfprintf(stderr,fmt,args);
+  va_end(args);
 #endif
-  /* Quit */
-  exit(code);
 }

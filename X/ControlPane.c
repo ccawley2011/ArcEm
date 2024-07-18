@@ -243,14 +243,14 @@ void ControlPane_Init(ARMul_State *state) {
 
 /*----------------------------------------------------------------------------*/
 
-void ControlPane_Error(int code,const char *fmt,...)
+void ControlPane_MessageBox(const char *fmt,...)
 {
   va_list args;
-  va_start(args,fmt);
+
   /* Log it */
+  va_start(args,fmt);
   vfprintf(stderr,fmt,args);
-  /* Quit */
-  exit(code);
+  va_end(args);
 }
 
 

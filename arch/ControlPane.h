@@ -13,7 +13,14 @@ void ControlPane_Init(ARMul_State *state);
 void ControlPane_Event(ARMul_State *state, XEvent *e);
 #endif
 
+/* Report an error */
+void ControlPane_MessageBox(const char *fmt,...);
+
 /* Report an error and exit */
+#ifdef SYSTEM_riscos_single
 void ControlPane_Error(int code,const char *fmt,...);
+#else
+#define ControlPane_Error(code,...) (ControlPane_MessageBox(__VA_ARGS__), exit(code))
+#endif
 
 #endif
