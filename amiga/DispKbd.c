@@ -915,7 +915,7 @@ Kbd_PollHostKbd(ARMul_State *state)
 
 /*-----------------------------------------------------------------------------*/
 
-int
+bool
 DisplayDev_Init(ARMul_State *state)
 {
   /* Setup display and cursor bitmaps */

@@ -117,6 +117,11 @@ ARMul_State *ARMul_NewState(ArcemConfig *pConfig)
  return(state);
  }
 
+void ARMul_FreeState(ARMul_State *state)
+{
+ state_free(state);
+}
+
 /***************************************************************************\
 * Call this routine to set up the initial machine state (or perform a RESET *
 \***************************************************************************/

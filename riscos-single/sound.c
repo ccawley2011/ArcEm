@@ -24,6 +24,7 @@
 #include "../arch/sound.h"
 #include "../arch/archio.h"
 #include "../arch/displaydev.h"
+#include "../arch/ControlPane.h"
 
 #include "kernel.h"
 #include "swis.h"
@@ -181,7 +182,7 @@ static void shutdown_sharedsound(void)
 	_kernel_swi(OS_Release,&regs,&regs); 
 }
 
-int Sound_InitHost(ARMul_State *state)
+bool Sound_InitHost(ARMul_State *state)
 {
   /* We want the right channel first */
   eSound_StereoSense = Stereo_RightLeft;
@@ -195,12 +196,12 @@ int Sound_InitHost(ARMul_State *state)
 #ifndef PROFILE_ENABLED
   if (init_sharedsound())
   {
-    fprintf(stderr,"Error: Couldn't register sound handler\n");
-    return -1;
+    ControlPane_MessageBox("Error: Couldn't register sound handler\n");
+    return false;
   }
 #endif
 
-  return 0;
+  return true;
 }
 
 SoundData *Sound_GetHostBuffer(int32_t *destavail)

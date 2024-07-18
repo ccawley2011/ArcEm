@@ -54,11 +54,6 @@ static void dagstandalone_handlesignal(int sig) {
 #endif
 #endif
 
-static void InitFail(int exitcode, char const *which) {
-  ControlPane_Error(exitcode,"%s interface failed to initialise. Exiting\n",
-                            which);
-}
-
 /**
  * dagstandalone
  *
@@ -67,7 +62,7 @@ static void InitFail(int exitcode, char const *which) {
  *
  *
  */
- void dagstandalone(ArcemConfig *pConfig) {
+int dagstandalone(ArcemConfig *pConfig) {
 #ifndef WIN32
 #ifndef AMIGA
   struct sigaction action;
@@ -89,10 +84,18 @@ static void InitFail(int exitcode, char const *which) {
   ARMul_EmulateInit();
   emu_state = ARMul_NewState(pConfig);
   ARMul_Reset(emu_state);
-  if (ARMul_MemoryInit(emu_state) == FALSE)
-    InitFail(1, "Memory");
-  if (ARMul_CoProInit(emu_state) == FALSE)
-    InitFail(2, "Co-Processor");
+
+  if (!ARMul_MemoryInit(emu_state)) {
+    ARMul_FreeState(emu_state);
+    return EXIT_FAILURE;
+  }
+
+  if (!ARMul_CoProInit(emu_state)) {
+    ARMul_MemoryExit(emu_state);
+    ARMul_FreeState(emu_state);
+    return EXIT_FAILURE;
+  }
+
   ARMul_Reset(emu_state);
 
   /* Excecute */
@@ -102,4 +105,7 @@ static void InitFail(int exitcode, char const *which) {
   /* Close and Finalise */
   ARMul_CoProExit(emu_state);
   ARMul_MemoryExit(emu_state);
+  ARMul_FreeState(emu_state);
+
+  return EXIT_SUCCESS;
 }

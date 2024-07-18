@@ -456,7 +456,7 @@ static void PollDisplay(ARMul_State *state,int XScale,int YScale)
 }
 
 /*-----------------------------------------------------------------------------*/
-int DisplayDev_Init(ARMul_State *state)
+bool DisplayDev_Init(ARMul_State *state)
 {
   /* Setup display and cursor bitmaps */
 #if SDL_VERSION_ATLEAST(2, 0, 0)
@@ -469,7 +469,8 @@ int DisplayDev_Init(ARMul_State *state)
 #endif
 
   if (!screen) {
-      ControlPane_Error(0, "Failed to create initial window: %s\n", SDL_GetError());
+      ControlPane_MessageBox("Failed to create initial window: %s\n", SDL_GetError());
+      return false;
   } else if (screen->format->BytesPerPixel == 4) {
       return DisplayDev_Set(state,&SDD32_DisplayDev);
   } else if (screen->format->BytesPerPixel == 2) {
@@ -479,7 +480,8 @@ int DisplayDev_Init(ARMul_State *state)
       return DisplayDev_Set(state,&PDD_DisplayDev);
 #endif
   } else {
-      ControlPane_Error(0, "Unsupported bytes per pixel: %d\n", screen->format->BytesPerPixel);
+      ControlPane_MessageBox("Unsupported bytes per pixel: %d\n", screen->format->BytesPerPixel);
+      return false;
   }
 }
 

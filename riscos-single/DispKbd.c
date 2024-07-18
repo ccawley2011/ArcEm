@@ -821,7 +821,7 @@ static void restorebreak(void)
 
 static const DisplayDev *displays[2] = {&PDD_DisplayDev,&SDD16_DisplayDev};
 
-int
+bool
 DisplayDev_Init(ARMul_State *state)
 {
   KBD.leds_changed = leds_changed;

@@ -2,6 +2,7 @@
 #include "../armdefs.h"
 #include "../arch/sound.h"
 #include "../arch/displaydev.h"
+#include "../arch/ControlPane.h"
 
 #include <stdio.h>
 #include <assert.h>
@@ -91,7 +92,7 @@ void Sound_HostBuffered(SoundData *buffer,int32_t numSamples)
 	}
 }
 
-int
+bool
 Sound_InitHost(ARMul_State *state)
 {
 	WAVEFORMATEX format;
@@ -124,9 +125,9 @@ Sound_InitHost(ARMul_State *state)
 	format.nAvgBytesPerSec =  format.nSamplesPerSec * format.nBlockAlign;
 
 	if (waveOutOpen(&hWaveOut, WAVE_MAPPER, &format, (DWORD_PTR)sound_callback, (DWORD_PTR)&waveFreeBlockCount, CALLBACK_FUNCTION) != MMSYSERR_NOERROR) {
-		fprintf(stderr, "Failed to initialise the sound system\n");
+		ControlPane_MessageBox("Failed to initialise the sound system\n");
 		HeapFree(GetProcessHeap(), 0, waveBlocks);
-		return -1;
+		return false;
 	}
 
 	/* TODO - Tweak these as necessary */
@@ -136,7 +137,7 @@ Sound_InitHost(ARMul_State *state)
 
 	Sound_HostRate = format.nSamplesPerSec<<10;
 
-	return 0;
+	return true;
 }
 
 void sound_exit(void)

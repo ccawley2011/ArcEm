@@ -329,7 +329,7 @@ static int DisplayKbd_XError(Display* disp, XErrorEvent *err)
 }
 
 /*----------------------------------------------------------------------------*/
-int
+bool
 DisplayDev_Init(ARMul_State *state)
 {
   const char *s;
@@ -392,7 +392,8 @@ DisplayDev_Init(ARMul_State *state)
             PD.blue_prec);
     } else {
         puts("nothing suitable");
-      ControlPane_Error(EXIT_FAILURE,"DisplayKbd_Init: Failed to find a matching visual - I'm looking for either 8 bit Pseudo colour, or 32,24,16,  or 15 bit TrueColour - sorry\n");
+      ControlPane_MessageBox("DisplayKbd_Init: Failed to find a matching visual - I'm looking for either 8 bit Pseudo colour, or 32,24,16,  or 15 bit TrueColour - sorry\n");
+      return false;
     }
   }
 

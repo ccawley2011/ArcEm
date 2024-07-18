@@ -546,7 +546,7 @@ static void Sound_DMAEvent(ARMul_State *state,CycleCount nowtime)
   MEMC.Sptr += avail<<4;
 }
 
-int Sound_Init(ARMul_State *state)
+bool Sound_Init(ARMul_State *state)
 {
 #ifdef SOUND_SUPPORT
   SoundInitTable();
@@ -556,6 +556,6 @@ int Sound_Init(ARMul_State *state)
 #else
   Sound_UpdateDMARate(state);
   EventQ_Insert(state,ARMul_Time+Sound_DMARate,Sound_DMAEvent);
-  return 0;
+  return true;
 #endif
 }

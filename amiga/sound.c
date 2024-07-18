@@ -9,6 +9,7 @@
 #include "../armdefs.h"
 #include "../arch/sound.h"
 #include "../arch/displaydev.h"
+#include "../arch/ControlPane.h"
 
 BPTR audioh = 0;
 
@@ -24,7 +25,7 @@ static int openaudio(void)
 
 	if(!(audioh = Open(audiof,MODE_NEWFILE)))
 	{
-		fprintf(stderr, "Could not open audio: device\n");
+		ControlPane_MessageBox("Could not open audio: device\n");
 		return -1;
 	}
 
@@ -47,11 +48,11 @@ void Sound_HostBuffered(SoundData *buffer,int32_t numSamples)
 	Write(audioh,buffer,numSamples*sizeof(SoundData));
 }
 
-int
+bool
 Sound_InitHost(ARMul_State *state)
 {
 	if(openaudio() == -1)
-		return -1;
+		return false;
 
 	/* TODO - Tweak these as necessary */
 	eSound_StereoSense = Stereo_LeftRight;
@@ -60,7 +61,7 @@ Sound_InitHost(ARMul_State *state)
 
 	Sound_HostRate = sampleRate<<10;
 
-	return 0;
+	return true;
 }
 
 void sound_exit(void)

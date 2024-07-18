@@ -20,7 +20,7 @@ bool DisplayDev_UseUpdateFlags = true;
 bool DisplayDev_AutoUpdateFlags = false;
 int DisplayDev_FrameSkip = 0;
 
-int DisplayDev_Set(ARMul_State *state,const DisplayDev *dev)
+bool DisplayDev_Set(ARMul_State *state,const DisplayDev *dev)
 {
   struct Vidc_Regs Vidc;
   if(DisplayDev_Current)
@@ -35,12 +35,16 @@ int DisplayDev_Set(ARMul_State *state,const DisplayDev *dev)
   }
   if(dev)
   {
-    int ret = (dev->Init)(state,&Vidc);
-    if(ret)
-      return ret;
+    bool ret = (dev->Init)(state,&Vidc);
+    if(!ret)
+      return false;
     DisplayDev_Current = dev;
   }
-  return 0;
+  return true;
+}
+
+void DisplayDev_Exit(ARMul_State *state) {
+  DisplayDev_Set(state,NULL);
 }
 
 void DisplayDev_GetCursorPos(ARMul_State *state,int *x,int *y)

@@ -17,4 +17,4 @@
 
 typedef struct ArcemConfig_s ArcemConfig;
 
-void dagstandalone(ArcemConfig *pConfig);
+int dagstandalone(ArcemConfig *pConfig);

@@ -62,9 +62,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
     return EXIT_FAILURE;
 #endif
 
-  dagstandalone(&hArcemConfig);
-
-  return EXIT_SUCCESS;
+  return dagstandalone(&hArcemConfig);
 }
 
 #else
@@ -95,9 +93,7 @@ int main(int argc, char *argv[])
   if (!ArcemConfig_ParseCommandLine(&hArcemConfig, argc, argv))
     return EXIT_FAILURE;
 
-  dagstandalone(&hArcemConfig);
-
-  return EXIT_SUCCESS;
+  return dagstandalone(&hArcemConfig);
 }
 
 #endif

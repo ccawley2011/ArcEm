@@ -498,7 +498,7 @@ void ProcessKey(ARMul_State *state, int nVirtKey, int lKeyData, int nKeyStat) {
 
 
 /*-----------------------------------------------------------------------------*/
-static int
+static bool
 DisplayDev_Select(ARMul_State *state, ArcemConfig_DisplayDriver driver)
 {
   if (driver == DisplayDriver_Palettised)
@@ -508,7 +508,7 @@ DisplayDev_Select(ARMul_State *state, ArcemConfig_DisplayDriver driver)
 }
 
 /*-----------------------------------------------------------------------------*/
-int
+bool
 DisplayDev_Init(ARMul_State *state)
 {
   /* Setup display and cursor bitmaps */

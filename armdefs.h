@@ -297,6 +297,7 @@ static inline void state_free(void *p)
 
 void ARMul_EmulateInit(void);
 ARMul_State *ARMul_NewState(ArcemConfig *pConfig);
+void ARMul_FreeState(ARMul_State *state);
 void ARMul_Reset(ARMul_State *state);
 ARMword ARMul_DoProg(ARMul_State *state);
 
@@ -333,7 +334,7 @@ extern void ARMul_Abort(ARMul_State *state, ARMword address);
 *              Definitons of things in the memory interface                 *
 \***************************************************************************/
 
-extern unsigned ARMul_MemoryInit(ARMul_State *state);
+extern bool ARMul_MemoryInit(ARMul_State *state);
 extern void ARMul_MemoryExit(ARMul_State *state);
 
 /***************************************************************************\
@@ -349,7 +350,7 @@ extern void ARMul_MemoryExit(ARMul_State *state);
 #define ARMul_CANT 1
 #define ARMul_INC 3
 
-extern unsigned ARMul_CoProInit(ARMul_State *state);
+extern bool ARMul_CoProInit(ARMul_State *state);
 extern void ARMul_CoProExit(ARMul_State *state);
 extern void ARMul_CoProAttach(ARMul_State *state, unsigned number,
                               ARMul_CPInits *init, ARMul_CPExits *exits,

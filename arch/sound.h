@@ -16,7 +16,7 @@ typedef enum {
 
 extern Sound_StereoSense eSound_StereoSense;
 
-extern int Sound_Init(ARMul_State *state);
+extern bool Sound_Init(ARMul_State *state);
 
 extern void Sound_UpdateDMARate(ARMul_State *state);
 
@@ -28,7 +28,7 @@ extern void Sound_SoundFreqUpdated(ARMul_State *state);
 extern void Sound_StereoUpdated(ARMul_State *state);
 
 /* This call is made to the platform code upon initialisation */
-extern int Sound_InitHost(ARMul_State *state);
+extern bool Sound_InitHost(ARMul_State *state);
 
 /* This call is made to the platform code to get a pointer to an output buffer
    destavail must be set to the available space, measured in the number of stereo pairs (i.e. 4 byte units)

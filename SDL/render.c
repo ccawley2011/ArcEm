@@ -295,7 +295,7 @@ static void PollDisplay(ARMul_State *state)
 }
 
 /*-----------------------------------------------------------------------------*/
-int DisplayDev_Init(ARMul_State *state)
+bool DisplayDev_Init(ARMul_State *state)
 {
   Uint32 fmt, pf = SDL_PIXELFORMAT_UNKNOWN;
   SDL_RendererInfo info;
@@ -305,12 +305,14 @@ int DisplayDev_Init(ARMul_State *state)
   window = SDL_CreateWindow("ArcEm", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                             640, 512, SDL_WINDOW_RESIZABLE);
   if (!window) {
-    ControlPane_Error(0, "Failed to create initial window: %s\n", SDL_GetError());
+    ControlPane_MessageBox("Failed to create initial window: %s\n", SDL_GetError());
+    return false;
   }
 
   renderer = SDL_CreateRenderer(window, -1, 0);
   if (!renderer) {
-    ControlPane_Error(0, "Failed to create renderer: %s\n", SDL_GetError());
+    ControlPane_MessageBox("Failed to create renderer: %s\n", SDL_GetError());
+    return false;
   }
 
   if (SDL_GetRendererInfo(renderer, &info) >= 0) {
@@ -335,13 +337,15 @@ int DisplayDev_Init(ARMul_State *state)
 
   format = SDL_AllocFormat(pf);
   if (!format) {
-    ControlPane_Error(0, "Failed to create pixel format: %s\n", SDL_GetError());
+    ControlPane_MessageBox("Failed to create pixel format: %s\n", SDL_GetError());
+    return false;
   } else if (format->BytesPerPixel == 4) {
     return DisplayDev_Set(state,&SDD32R_DisplayDev);
   } else if (format->BytesPerPixel == 2) {
     return DisplayDev_Set(state,&SDD16R_DisplayDev);
   } else {
-    ControlPane_Error(0, "Unsupported bytes per pixel: %d\n", format->BytesPerPixel);
+    ControlPane_MessageBox("Unsupported bytes per pixel: %d\n", format->BytesPerPixel);
+    return false;
   }
 }
 

@@ -977,12 +977,12 @@ static void PDD_Name(IOEBCRWrite)(ARMul_State *state,ARMword data) {
 
 */
 
-static int PDD_Name(Init)(ARMul_State *state,const struct Vidc_Regs *Vidc)
+static bool PDD_Name(Init)(ARMul_State *state,const struct Vidc_Regs *Vidc)
 {
   state->Display = calloc(sizeof(struct PDD_Name(DisplayInfo)),1);
   if(!state->Display) {
-    warn_vidc("Failed to allocate DisplayInfo\n");
-    return -1;
+    ControlPane_MessageBox("Failed to allocate DisplayInfo\n");
+    return false;
   }
 
   VIDC = *Vidc;
@@ -998,7 +998,7 @@ static int PDD_Name(Init)(ARMul_State *state,const struct Vidc_Regs *Vidc)
   /* Schedule first update event */
   EventQ_Insert(state,ARMul_Time+100,PDD_Name(EventFunc));
 
-  return 0;
+  return true;
 }
 
 static void PDD_Name(Shutdown)(ARMul_State *state)
