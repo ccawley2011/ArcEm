@@ -199,7 +199,11 @@ static bool PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,in
 	oamRotateScale(&oamMain, 0, 0, xs, ys);
 
 	/* Screen is expected to be cleared */
+#ifdef __CALICO__
+	memset(bgGetGfxPtr(background), 0, PDD_MonitorWidth * PDD_MonitorHeight);
+#else
 	dmaFillHalfWords(0, bgGetGfxPtr(background), PDD_MonitorWidth * PDD_MonitorHeight);
+#endif
 
 	return true;
 }
@@ -321,6 +325,11 @@ static void ProcessButtons(ARMul_State *state, int pressed, int released) {
 int
 Kbd_PollHostKbd(ARMul_State *state)
 {
+#ifdef __CALICO__
+	if (!pmMainLoop())
+		exit(0);
+#endif
+
 	touchPosition touch;
 	scanKeys();
 
