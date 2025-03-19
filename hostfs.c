@@ -197,15 +197,11 @@ typedef struct {
 
 #define DEFAULT_ATTRIBUTES  0x03
 #define DEFAULT_FILE_TYPE   RISC_OS_FILE_TYPE_TEXT
-#define MINIMUM_BUFFER_SIZE 32768
 
 /** Disc name of default disc or if no disc name is present */
 static const char *disc_name_default = "HostFS";
 
 static FILE *open_file[MAX_OPEN_FILES + 1]; /* array subscript 0 is never used */
-
-static unsigned char *buffer = NULL;
-static size_t buffer_size = 0;
 
 static cache_directory_entry *cache_entries = NULL;
 static unsigned cache_entries_count = 0; /**< Number of valid entries in \a cache_entries */
@@ -301,22 +297,6 @@ hostfs_disc_name_valid(const char *disc_name)
     return 0;
   }
   return 1;
-}
-
-/**
- * @param buffer_size_needed Required buffer
- */
-static void
-hostfs_ensure_buffer_size(size_t buffer_size_needed)
-{
-  if (buffer_size_needed > buffer_size) {
-    buffer = realloc(buffer, buffer_size_needed);
-    if (!buffer) {
-      hostfs_error(EXIT_FAILURE,"HostFS could not increase buffer size to %lu bytes\n",
-              (unsigned long) buffer_size_needed);
-    }
-    buffer_size = buffer_size_needed;
-  }
 }
 
 /**
@@ -1220,9 +1200,8 @@ hostfs_args_7_ensure_file_size(ARMul_State *state)
 static void
 hostfs_args_8_write_zeros(ARMul_State *state)
 {
-  const unsigned BUFSIZE = MINIMUM_BUFFER_SIZE;
   FILE *f;
-  size_t length;
+  size_t bytes_written;
 
   assert(state);
 
@@ -1235,20 +1214,10 @@ hostfs_args_8_write_zeros(ARMul_State *state)
 
   fseeko64(f, (off64_t) state->Reg[2], SEEK_SET);
 
-  hostfs_ensure_buffer_size(BUFSIZE);
-  memset(buffer, 0, BUFSIZE);
-
-  length = state->Reg[3];
-  while (length > 0) {
-    size_t buffer_amount = MIN(length, BUFSIZE);
-    size_t written;
-
-    written = fwrite(buffer, 1, buffer_amount, f);
-    if (written < buffer_amount) {
-      warn_hostfs("fwrite(): %s\n", strerror(errno));
-      return;
-    }
-    length -= written;
+  bytes_written = File_WriteFill(f,0,state->Reg[3]);
+  if(bytes_written != state->Reg[3])
+  {
+    warn_hostfs("hostfs_write_file(): Failed to write full extent of file\n");
   }
 }
 
@@ -1323,7 +1292,6 @@ hostfs_close(ARMul_State *state)
 static void
 hostfs_write_file(ARMul_State *state, bool with_data)
 {
-  const unsigned BUFSIZE = MINIMUM_BUFFER_SIZE;
   char ro_path[PATH_MAX];
   char host_pathname[PATH_MAX], new_pathname[PATH_MAX];
   ARMword ptr;
@@ -1391,18 +1359,7 @@ hostfs_write_file(ARMul_State *state, bool with_data)
   if (with_data) {
     bytes_written = File_WriteRAM(state,f,ptr,length);
   } else {
-    /* Fill the data buffer with 0's if we are not saving supplied data */
-    hostfs_ensure_buffer_size(BUFSIZE);
-    memset(buffer, 0, BUFSIZE);
-    while(length > 0) {
-      size_t buffer_amount = MIN(length,BUFSIZE);
-      /* TODO check for errors */
-      size_t temp = fwrite(buffer, 1, buffer_amount, f);
-      length -= temp;
-      bytes_written += temp;
-      if(temp != buffer_amount)
-        break;
-    }
+    bytes_written = File_WriteFill(f,0,length);
   }
 
   if(bytes_written != (state->Reg[5] - state->Reg[4]))

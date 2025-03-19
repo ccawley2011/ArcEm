@@ -92,6 +92,19 @@ FILE *File_OpenAppData(const char *sName, const char *sMode);
 /* These next few are implemented in arch/filecommon.c */
 
 /**
+ * File_WriteFill
+ *
+ * Writes a single byte a specified number of times to
+ * the given file handle
+ *
+ * @param pFile File to write to
+ * @param uVal Byte to write
+ * @param uCount Number of bytes to write
+ * @returns Number of bytes written
+ */
+size_t File_WriteFill(FILE *pFile,uint8_t uVal,size_t uCount);
+
+/**
  * File_ReadEmu
  *
  * Reads from the given file handle into the given buffer

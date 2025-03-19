@@ -25,6 +25,7 @@
 #include "../armdefs.h"
 
 #include "dbugsys.h"
+#include "filecalls.h"
 #include "hdc63463.h"
 #include "ArcemConfig.h"
 #include "ControlPane.h"
@@ -86,7 +87,7 @@ struct HDCStruct {
 };
 
 /* The global Hard drive state structure */
-/*struct HDCStruct HDCData;*/
+#define HDC HDCData
 struct HDCStruct HDC;
 
 
@@ -1296,13 +1297,6 @@ static void WriteFormat_DoNextBufferFull(ARMul_State *state) {
   to do */
   int ptr=0;
   int sectorsleft=HDC.CommandData.WriteFormat.SectorsLeft;
-  char *fillbuffer; /* A buffer which holds a block of data to write */
-
-  if (fillbuffer=malloc(8192),fillbuffer==NULL) {
-    ControlPane_Error(1,"HDC:WriteFormat_DoNextBufferFull: Couldn't allocate memory for fillbuffer\n");
-  }
-
-  memset(fillbuffer,0x4e,8192);
 
   HDC.CurrentlyOpenDataBuffer^=1;
   HDC.DBufPtrs[HDC.CurrentlyOpenDataBuffer]=0;
@@ -1312,16 +1306,14 @@ static void WriteFormat_DoNextBufferFull(ARMul_State *state) {
     physical and logical cylinders to mismatch - if we are then we are in trouble! */
 
     /* Write the block to the hard disc image file */
-    fwrite(fillbuffer, 1, CONFIG.aST506DiskShapes[HDC.CommandData.WriteFormat.US].RecordLength,
-           HDC.HardFile[HDC.CommandData.WriteFormat.US]);
+    File_WriteFill(HDC.HardFile[HDC.CommandData.WriteFormat.US], 0x4e,
+                   CONFIG.aST506DiskShapes[HDC.CommandData.WriteFormat.US].RecordLength);
     fflush(HDC.HardFile[HDC.CommandData.WriteFormat.US]);
 
     ptr+=4; /* 4 bytes of values taken out of the buffer */
   } /* Sector loop */
 
   HDC.CommandData.WriteFormat.SectorsLeft=sectorsleft;
-
-  free(fillbuffer);
 
   /* If there are more sectors left then lets trigger off another DMA else end */
   if (sectorsleft>0) {

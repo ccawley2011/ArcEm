@@ -179,6 +179,37 @@ static size_t filebuffer_endwrite(void)
 #endif
 
 /**
+ * File_WriteFill
+ *
+ * Writes a single byte a specified number of times to
+ * the given file handle
+ *
+ * @param pFile File to write to
+ * @param uVal Byte to write
+ * @param uCount Number of bytes to write
+ * @returns Number of bytes written
+ */
+size_t File_WriteFill(FILE *pFile,uint8_t uVal,size_t uCount)
+{
+  /* Split into chunks and copy into the temp buffer */
+  size_t ret = 0;
+
+  while(uCount > 0)
+  {
+    size_t count2 = MIN(sizeof(temp_buf),uCount);
+    size_t written;
+    memset(temp_buf,uVal,count2);
+
+    written = fwrite(temp_buf,1,count2,pFile);
+    ret += written;
+    uCount -= written;
+    if(written < count2)
+      break;
+  }
+  return ret;
+}
+
+/**
  * File_ReadEmu
  *
  * Reads from the given file handle into the given buffer
