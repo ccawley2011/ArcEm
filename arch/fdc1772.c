@@ -19,13 +19,15 @@
 /*#include <unistd.h>*/
 
 #include "../armdefs.h"
-#include "../armemu.h"
 
 #include "ArcemConfig.h"
 #include "armarc.h"
 #include "ControlPane.h"
 #include "dbugsys.h"
 #include "fdc1772.h"
+#include "filecalls.h"
+
+#include "../armemu.h"
 
 #define DBG(a) dbug_fdc a
 
@@ -146,7 +148,7 @@ static void FDC_DoWriteChar(ARMul_State *state);
 static void FDC_DoReadChar(ARMul_State *state);
 static void FDC_DoReadAddressChar(ARMul_State *state);
 
-static void efseek(FILE *fp, int32_t offset, int whence);
+static void efseek(FILE *fp, off_t offset);
 
 /*--------------------------------------------------------------------------*/
 static void GenInterrupt(ARMul_State *state, const char *reason) {
@@ -612,7 +614,7 @@ static void FDC_ReadAddressCommand(ARMul_State *state) {
   }
 
   if (FDC.drive[FDC.CurrentDisc].fp) {
-    efseek(FDC.drive[FDC.CurrentDisc].fp, offset, SEEK_SET);
+    efseek(FDC.drive[FDC.CurrentDisc].fp, offset);
 
     FDC.BytesToGo=6; /* 6 bytes of data from a Read address command */
     FDC_DoReadAddressChar(state);
@@ -644,7 +646,7 @@ static void FDC_ReadCommand(ARMul_State *state) {
   offset = SECTOR_LOC_TO_BYTE_OFF(FDC.Track, Side, FDC.Sector);
 
   if (FDC.drive[FDC.CurrentDisc].fp) {
-    efseek(FDC.drive[FDC.CurrentDisc].fp, offset, SEEK_SET);
+    efseek(FDC.drive[FDC.CurrentDisc].fp, offset);
   }
 
   FDC.BytesToGo = CURRENT_FORMAT->bytes_per_sector;
@@ -705,7 +707,7 @@ static void FDC_WriteCommand(ARMul_State *state) {
   }
 
   offset = SECTOR_LOC_TO_BYTE_OFF(FDC.Track, Side, FDC.Sector);
-  efseek(FDC.drive[FDC.CurrentDisc].fp, offset, SEEK_SET);
+  efseek(FDC.drive[FDC.CurrentDisc].fp, offset);
 
   FDC.BytesToGo = CURRENT_FORMAT->bytes_per_sector + 1;
   /*GenDRQ(state); */ /* Please mister host - give me some data! - no that should happen on the regular!*/
@@ -911,9 +913,9 @@ FDC_InsertFloppy(unsigned int drive, const char *image)
 
   assert(dr->fp == NULL);
 
-  if ((fp = fopen(image, "rb+")) != NULL) {
+  if ((fp = File_Open(image, "rb+")) != NULL) {
     dr->write_protected = false;
-  } else if ((fp = fopen(image, "rb")) != NULL) {
+  } else if ((fp = File_Open(image, "rb")) != NULL) {
     dr->write_protected = true;
   } else {
     warn_fdc("couldn't open disc image %s on drive %d\n",
@@ -921,8 +923,7 @@ FDC_InsertFloppy(unsigned int drive, const char *image)
     return "couldn't open disc image";
   }
 
-  if (fseek(fp, 0, SEEK_END) == -1 || (len = ftell(fp)) == -1 ||
-      fseek(fp, 0, SEEK_SET) == -1)
+  if ((len = File_Size(fp)) == -1)
   {
     warn_fdc("couldn't get length of disc image %s on drive "
             "%d\n", image, drive);
@@ -976,7 +977,7 @@ FDC_EjectFloppy(unsigned int drive)
 
   assert(dr->fp);
 
-  if (fclose(dr->fp)) {
+  if (!File_Close(dr->fp)) {
     warn_fdc("error closing floppy drive %d: %s\n",
             drive, strerror(errno));
   }
@@ -1012,11 +1013,10 @@ FDC_IsFloppyInserted(unsigned int drive)
 
 /* ------------------------------------------------------------------ */
 
-static void efseek(FILE *fp, int32_t offset, int whence)
+static void efseek(FILE *fp, off_t offset)
 {
-  if (fseek(fp, offset, whence)) {
-    ControlPane_Error(1,"efseek(%p, %ld, %d) failed.\n", fp, (long int) offset,
-            whence);
+  if (!File_Seek(fp, offset)) {
+    ControlPane_Error(1,"efseek(%p, %ld) failed.\n", fp, (long int) offset);
   }
 
   return;

@@ -69,7 +69,7 @@ static void sigfunc(int sig)
 	int i;
 	for(i=0;i<4;i++)
 	  fprintf(stderr,"Timer%d Count %08x Latch %08x\n",i,ioc.TimerCount[i],ioc.TimerInputLatch[i]);
-	FILE *f = fopen("$.dump","wb");
+	FILE *f = File_Open("$.dump","wb");
 	if(f)
 	{
 		for(i=0;i<1024*1024;i+=4)
@@ -77,9 +77,9 @@ static void sigfunc(int sig)
 			ARMword word = ARMul_LoadWordS(state,i);
 			if(state->abortSig)
 				break;
-			fwrite(&word,4,1,f);
+			File_Write(f,&word,4);
 		}
-		fclose(f);
+		File_Close(f);
 	}
 #endif
 

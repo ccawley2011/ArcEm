@@ -484,8 +484,8 @@ static int SetFilePtr(ARMul_State *state, unsigned int drive, uint32_t head,
         return 0;
     }
 
-    if (fseek(HDC.HardFile[drive], ptr, SEEK_SET)) {
-        dbug("SetFilePtr: fseek failed: errno=%d\n", errno);
+    if (!File_Seek(HDC.HardFile[drive], ptr)) {
+        dbug("SetFilePtr: file seek failed: errno=%d\n", errno);
         Cause_Error(state, ERR_NRY);
         return 0;
     }
@@ -799,8 +799,8 @@ static void ReadData_DoNextBufferFull(ARMul_State *state) {
     HDC.DREQ=true;
     UpdateInterrupt(state);
 
-    fread(HDC.DBufs[HDC.CommandData.ReadData.NextDestBuffer],
-          1,256,HDC.HardFile[HDC.CommandData.ReadData.US]);
+    File_Read(HDC.HardFile[HDC.CommandData.ReadData.US],
+              HDC.DBufs[HDC.CommandData.ReadData.NextDestBuffer],256);
 
     dbug_hdc("HDC:ReadData_DoNextBufferFull - just got\n");
 #ifdef DEBUG_DATA
@@ -966,8 +966,8 @@ static void WriteData_DoNextBufferFull(ARMul_State *state) {
 #endif
 
   /* Throw the data out to the disc */
-  fwrite(HDC.DBufs[HDC.CommandData.WriteData.CurrentSourceBuffer],1,256,
-         HDC.HardFile[HDC.CommandData.WriteData.US]);
+  File_Write(HDC.HardFile[HDC.CommandData.WriteData.US],
+             HDC.DBufs[HDC.CommandData.WriteData.CurrentSourceBuffer],256);
   fflush(HDC.HardFile[HDC.CommandData.WriteData.US]);
 
   HDC.CommandData.WriteData.CurrentSourceBuffer^=1;
@@ -1071,7 +1071,7 @@ static void CompareData_DoNextBufferFull(ARMul_State *state) {
 #endif
 
   /* Throw the data out to the disc */
-  fread(tmpbuf,1,256,HDC.HardFile[HDC.CommandData.WriteData.US]);
+  File_Read(HDC.HardFile[HDC.CommandData.WriteData.US],tmpbuf,256);
 
   if (memcmp(tmpbuf,HDC.DBufs[HDC.CommandData.WriteData.CurrentSourceBuffer],256)!=0) {
     /* Oops - data didn't compare */
@@ -1138,7 +1138,7 @@ static void CheckData_DoNextBufferFull(ARMul_State *state) {
     size_t retval;
 
     /* Fill here up! */
-    if (retval=fread(tmpbuff,1,256,HDC.HardFile[HDC.CommandData.ReadData.US]),retval!=256)
+    if (retval=File_Read(HDC.HardFile[HDC.CommandData.ReadData.US],tmpbuff,256),retval!=256)
     {
       warn_hdc("HDC: CheckData_DoNextBufferFull - returning data err - retval=0x%x\n",retval);
       /* End of command */
@@ -1608,11 +1608,11 @@ void HDC_Init(ARMul_State *state) {
       continue;
 
     {
-      FILE *isThere = fopen(FileName, "rb");
+      FILE *isThere = File_Open(FileName, "rb");
 
       if (isThere) {
-        fclose(isThere);
-        HDC.HardFile[currentdrive] = fopen(FileName,"rb+");
+        File_Close(isThere);
+        HDC.HardFile[currentdrive] = File_Open(FileName,"rb+");
       } else {
         HDC.HardFile[currentdrive] = NULL;
       }

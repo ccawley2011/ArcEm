@@ -134,7 +134,7 @@ extnrom_calculate_size(const char *dir, uint32_t *entry_count)
     /* Construct relative path to the entry */
     path = Directory_GetFullPath(&hDir, sFilename);
 
-    f = fopen(path, "rb");
+    f = File_Open(path, "rb");
     if (!f) {
       warn_data("Could not open file \'%s\': %s\n",
                 path, strerror(errno));
@@ -142,10 +142,9 @@ extnrom_calculate_size(const char *dir, uint32_t *entry_count)
       continue;
     }
 
-    fseek(f, 0, SEEK_END);
-    ulFilesize = ftell(f);
+    ulFilesize = File_Size(f);
 
-    fclose(f);
+    File_Close(f);
     free(path);
 
     /* Add on size of file */
@@ -274,7 +273,7 @@ extnrom_load(const char *dir, uint32_t size, uint32_t entry_count, void *address
     /* Construct relative path to the entry */
     path = Directory_GetFullPath(&hDir, sFilename);
 
-    f = fopen(path, "rb");
+    f = File_Open(path, "rb");
     if (!f) {
       warn_data("Could not open file \'%s\': %s\n",
                 path, strerror(errno));
@@ -282,9 +281,7 @@ extnrom_load(const char *dir, uint32_t size, uint32_t entry_count, void *address
       continue;
     }
 
-    fseek(f, 0, SEEK_END);
-    ulFilesize = (ARMword)ftell(f);
-    fseek(f, 0, SEEK_SET);
+    ulFilesize = (ARMword)File_Size(f);
 
     /* Offset of where this module will be placed in the ROM */
     offset = (ARMword)((modules - start_addr) * 4) + 4;
@@ -301,15 +298,15 @@ extnrom_load(const char *dir, uint32_t size, uint32_t entry_count, void *address
     modules++;
 
     /* Load module */
-    if (fread(modules, 1, ulFilesize, f) != ulFilesize) {
+    if (File_Read(f, modules, ulFilesize) != ulFilesize) {
       warn_data("Error while loading file \'%s\': %s\n",
                 path, strerror(errno));
-      fclose(f);
+      File_Close(f);
       free(path);
       continue;
     }
 
-    fclose(f);
+    File_Close(f);
     free(path);
 
     /* Byte-swap module from little-endian to host processor */
@@ -337,9 +334,9 @@ extnrom_load(const char *dir, uint32_t size, uint32_t entry_count, void *address
   extnrom_endian_correct(start_addr + size_in_words - 2, 8);
 
   /*{
-    FILE *f = fopen("extnrom_dump", "wb");
-    fwrite(start_addr, 1, size, f);
-    fclose(f);
+    FILE *f = File_Open("extnrom_dump", "wb");
+    File_Write(f, start_addr, size);
+    File_Close(f);
   }*/
 }
 

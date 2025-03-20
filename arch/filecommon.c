@@ -12,6 +12,11 @@
 
 #include <stdio.h>
 #include <stddef.h>
+#if defined _MSC_VER || defined __WATCOMC__
+# include <io.h>
+#else
+# include <unistd.h>
+#endif
 
 #include "armarc.h"
 #include "dbugsys.h"
@@ -56,7 +61,7 @@ static void filebuffer_fill(void)
 {
   size_t temp = MIN(filebuffer_remain,MAX_FILEBUFFER);
   filebuffer_offset = 0;
-  filebuffer_buffered = fread(buffer,1,temp,filebuffer_file);
+  filebuffer_buffered = File_Read(filebuffer_file,buffer,temp);
   if(filebuffer_buffered != temp)
     filebuffer_remain = 0;
   else
@@ -85,7 +90,7 @@ static size_t filebuffer_read(uint8_t *pBuffer,size_t uCount,bool endian)
     if(endian)
       return File_ReadEmu(filebuffer_file,pBuffer,uCount);
     else
-      return fread(pBuffer,1,uCount,filebuffer_file);
+      return File_Read(filebuffer_file,pBuffer,uCount);
   }
   ret = 0;
   while(uCount)
@@ -135,7 +140,7 @@ static void filebuffer_write(uint8_t *pBuffer,size_t uCount,bool endian)
     if(endian)
       temp = File_WriteEmu(filebuffer_file,pBuffer,uCount);
     else
-      temp = fwrite(pBuffer,1,uCount,filebuffer_file);
+      temp = File_Write(filebuffer_file,pBuffer,uCount);
     filebuffer_buffered += temp;
     if(temp != uCount)
       filebuffer_remain = filebuffer_buffered;
@@ -154,7 +159,7 @@ static void filebuffer_write(uint8_t *pBuffer,size_t uCount,bool endian)
     if(filebuffer_offset == buffer_size)
     {
       /* Flush */
-      size_t temp2 = fwrite(buffer,1,filebuffer_offset,filebuffer_file);
+      size_t temp2 = File_Write(filebuffer_file,buffer,filebuffer_offset);
       filebuffer_buffered += temp2;
       if(temp2 != filebuffer_offset)
       {
@@ -171,12 +176,147 @@ static size_t filebuffer_endwrite(void)
   if(filebuffer_inuse && filebuffer_offset)
   {
     /* Flush */
-    size_t temp2 = fwrite(buffer,1,filebuffer_offset,filebuffer_file);
+    size_t temp2 = File_Write(filebuffer_file,buffer,filebuffer_offset);
     filebuffer_buffered += temp2;
   }
   return filebuffer_buffered;
 }
 #endif
+
+#if defined _MSC_VER || defined __WATCOMC__
+# define ftello ftell
+# define fseeko fseek
+#endif
+
+/* Visual Studio doesn't have ftruncate; use _chsize instead */
+#if defined _MSC_VER || defined __WATCOMC__
+# define ftruncate _chsize
+#endif
+
+/**
+ * File_Open
+ *
+ * Open the specified file
+ *
+ * @param sName Name of file to open
+ * @param sMode Mode to open the file with
+ * @returns File handle or NULL on failure
+ */
+FILE *File_Open(const char *sName, const char *sMode)
+{
+  return fopen(sName, sMode);
+}
+
+/**
+ * File_Close
+ *
+ * Close the given file handle
+ *
+ * @param pFile File to close
+ * @returns true on success or false on failure
+ */
+bool File_Close(FILE *pFile)
+{
+  return (fclose(pFile) == 0);
+}
+
+/**
+ * File_Size
+ *
+ * Sets the position of the given file handle.
+ *
+ * @param pFile File to examine
+ * @param iSize The new position of the file
+ * @returns true on success or false on failure
+ */
+bool File_Seek(FILE *pFile, off_t iOffset)
+{
+  return (fseeko(pFile, iOffset, SEEK_SET) == 0);
+}
+
+/**
+ * File_Size
+ *
+ * Return the size of the given file handle.
+ *
+ * @param pFile File to examine
+ * @returns The size of the file or -1 on failure
+ */
+off_t File_Size(FILE *pFile)
+{
+  off_t pos, size;
+
+  pos = ftello(pFile);
+  fseeko(pFile, 0, SEEK_END);
+  size = ftello(pFile);
+  fseeko(pFile, pos, SEEK_SET);
+
+  return size;
+}
+
+/**
+ * File_Truncate
+ *
+ * Extend or truncate the given file handle to the specified
+ * size. Null characters are appended if the file is extended.
+ *
+ * @param pFile File to truncate
+ * @param iSize The new size of the file
+ * @returns true on success or false on failure
+ */
+bool File_Truncate(FILE *pFile, off_t iSize)
+{
+#ifndef __amigaos3__
+  int fd;
+
+  /* Flush any pending I/O before moving to low-level I/O functions */
+  if (fflush(pFile)) {
+    return false;
+  }
+
+  /* Obtain underlying file descriptor for this FILE* */
+  fd = fileno(pFile);
+  if (fd < 0) {
+    return false;
+  }
+
+  /* Set file to required extent */
+  return (ftruncate(fd, iSize) == 0);
+#else
+  /* no ftruncate in libnix - not sure if this is a critical function */
+  return false;
+#endif
+}
+
+/**
+ * File_Read
+ *
+ * Reads from the given file handle into the given buffer
+ *
+ * @param pFile File to read from
+ * @param pBuffer Buffer to write to
+ * @param uCount Number of bytes to read
+ * @returns Number of bytes read
+ */
+size_t File_Read(FILE *pFile,void *pBuffer,size_t uCount)
+{
+  return fread(pBuffer,1,uCount,pFile);
+}
+
+/**
+ * File_Write
+ *
+ * Writes data to the given file handle
+ *
+ * @param pFile File to write to
+ * @param pBuffer Buffer to read from
+ * @param uCount Number of bytes to write
+ * @returns Number of bytes written
+ */
+size_t File_Write(FILE *pFile,const void *pBuffer,size_t uCount)
+{
+  return fwrite(pBuffer,1,uCount,pFile);
+}
 
 /**
  * File_WriteFill
@@ -200,7 +340,7 @@ size_t File_WriteFill(FILE *pFile,uint8_t uVal,size_t uCount)
     size_t written;
     memset(temp_buf,uVal,count2);
 
-    written = fwrite(temp_buf,1,count2,pFile);
+    written = File_Write(pFile,temp_buf,count2);
     ret += written;
     uCount -= written;
     if(written < count2)
@@ -233,7 +373,7 @@ size_t File_ReadEmu(FILE *pFile,uint8_t *pBuffer,size_t uCount)
   {
     int offset = ((int) pBuffer)&3;
     size_t count2 = MIN(sizeof(temp_buf)-offset,uCount);
-    size_t read = fread(temp_buf+offset,1,count2,pFile);
+    size_t read = File_Read(pFile,temp_buf+offset,count2);
     InvByteCopy(pBuffer,temp_buf+offset,read);
     ret += read;
     pBuffer += read;
@@ -244,7 +384,7 @@ size_t File_ReadEmu(FILE *pFile,uint8_t *pBuffer,size_t uCount)
   }
   return ret;
 #else
-  return fread(pBuffer,1,uCount,pFile);
+  return File_Read(pFile,pBuffer,uCount);
 #endif
 }
 
@@ -269,7 +409,7 @@ size_t File_WriteEmu(FILE *pFile,const uint8_t *pBuffer,size_t uCount)
     int offset = ((int) pBuffer)&3;
     size_t count2 = MIN(sizeof(temp_buf)-offset,uCount);
     ByteCopy(temp_buf+offset,pBuffer,count2);
-    size_t written = fwrite(temp_buf+offset,1,count2,pFile);
+    size_t written = File_Write(pFile,temp_buf+offset,count2);
     ret += written;
     pBuffer += written;
     uCount -= written;
@@ -278,7 +418,7 @@ size_t File_WriteEmu(FILE *pFile,const uint8_t *pBuffer,size_t uCount)
   }
   return ret; 
 #else
-  return fwrite(pBuffer,1,uCount,pFile);
+  return File_Write(pFile,pBuffer,uCount);
 #endif
 }
 
@@ -356,7 +496,7 @@ size_t File_ReadRAM(ARMul_State *state, FILE *pFile,ARMword uAddress,size_t uCou
 #ifdef USE_FILEBUFFER
       size_t temp = filebuffer_read(temp_buf+(uAddress&3),amt,false);
 #else
-      size_t temp = fread(temp_buf+(uAddress&3),1,amt,pFile);
+      size_t temp = File_Read(pFile,temp_buf+(uAddress&3),amt);
 #endif
       size_t temp2 = temp;
       /* Deal with start bytes */
@@ -495,7 +635,7 @@ size_t File_WriteRAM(ARMul_State *state, FILE *pFile,ARMword uAddress,size_t uCo
       uCount -= amt;
 #else
       /* Write it out */
-      temp2 = fwrite(temp,1,amt,pFile);
+      temp2 = File_Write(pFile,temp,amt);
 
       /* Update state */
       ret += temp2;

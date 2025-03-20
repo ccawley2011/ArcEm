@@ -176,14 +176,14 @@ static void SaveCMOS(ARMul_State *state) {
 #endif
 
   if (CONFIG.sCMOSFileName) {
-    OutFile = fopen(CONFIG.sCMOSFileName, "w");
+    OutFile = File_Open(CONFIG.sCMOSFileName, "w");
     if (OutFile == NULL) {
       ControlPane_Error(1, "SaveCMOS: Could not open CMOS settings file (%s)\n", CONFIG.sCMOSFileName);
     }
   } else {
     OutFile = File_OpenAppData(defaultFile, "w");
     if (OutFile == NULL) {
-      OutFile = fopen(defaultFile, "w");
+      OutFile = File_Open(defaultFile, "w");
       if (OutFile == NULL) {
         ControlPane_Error(1, "SaveCMOS: Could not open CMOS settings file (%s)\n", defaultFile);
       }
@@ -196,7 +196,7 @@ static void SaveCMOS(ARMul_State *state) {
     fprintf(OutFile,"%x\n",val);
   };
 
-  fclose(OutFile);
+  File_Close(OutFile);
 } /* SaveCMOS */
 
 /*------------------------------------------------------------------------------*/
@@ -440,13 +440,13 @@ static void SetUpCMOS(ARMul_State *state)
     unsigned int val;
 
     if (CONFIG.sCMOSFileName) {
-        if ((fp = fopen(CONFIG.sCMOSFileName, "r")) == NULL)
+        if ((fp = File_Open(CONFIG.sCMOSFileName, "r")) == NULL)
             warn_i2c("SetUpCMOS: Could not open (hexcmos) CMOS settings file, "
                 "resetting to internal defaults.\n");
         filename = CONFIG.sCMOSFileName;
     } else {
         if ((fp = File_OpenAppData(filename, "r")) == NULL) {
-            if ((fp = fopen(filename, "r")) == NULL) {
+            if ((fp = File_Open(filename, "r")) == NULL) {
                 warn_i2c("SetUpCMOS: Could not open (hexcmos) CMOS settings file, "
                     "resetting to internal defaults.\n");
             }
@@ -469,7 +469,7 @@ static void SetUpCMOS(ARMul_State *state)
         I2C.Data[dest] = val;
     }
 
-    if (fp) fclose(fp);
+    if (fp) File_Close(fp);
 }
 
 /* ------------------------------------------------------------------ */

@@ -5,6 +5,7 @@
 #ifndef __FILEWIN_H
 #define __FILEWIN_H
 
+#include <sys/types.h>
 #include <windows.h>
 
 struct Directory_s {

@@ -213,15 +213,15 @@ void ArcemConfig_ParseConfigFile(ArcemConfig* pConfig)
 #endif
     dbug("Reading options from file %s\n", filename);
 
-    file = fopen(filename, "r");
+    file = File_Open(filename, "r");
     if (file) {
         ini_parse_file(file, ArcemConfig_Handler, pConfig);
-        fclose(file);
+        File_Close(file);
     } else {
         file = File_OpenAppData(filename, "r");
         if (file) {
             ini_parse_file(file, ArcemConfig_Handler, pConfig);
-            fclose(file);
+            File_Close(file);
         }
     }
 }

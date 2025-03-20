@@ -5,6 +5,7 @@
 #ifndef __FILERO_H
 #define __FILERO_H
 
+#include <sys/types.h>
 #include "kernel.h"
 
 struct Directory_s {

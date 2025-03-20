@@ -92,6 +92,84 @@ FILE *File_OpenAppData(const char *sName, const char *sMode);
 /* These next few are implemented in arch/filecommon.c */
 
 /**
+ * File_Open
+ *
+ * Open the specified file
+ *
+ * @param sName Name of file to open
+ * @param sMode Mode to open the file with
+ * @returns File handle or NULL on failure
+ */
+FILE *File_Open(const char *sName, const char *sMode);
+
+/**
+ * File_Close
+ *
+ * Close the given file handle
+ *
+ * @param pFile File to close
+ * @returns true on success or false on failure
+ */
+bool File_Close(FILE *pFile);
+
+/**
+ * File_Size
+ *
+ * Sets the position of the given file handle.
+ *
+ * @param pFile File to examine
+ * @param iSize The new position of the file
+ * @returns true on success or false on failure
+ */
+bool File_Seek(FILE *pFile, off_t iOffset);
+
+/**
+ * File_Size
+ *
+ * Return the size of the given file handle.
+ *
+ * @param pFile File to examine
+ * @returns The size of the file or -1 on failure
+ */
+off_t File_Size(FILE *pFile);
+
+/**
+ * File_Truncate
+ *
+ * Extend or truncate the given file handle to the specified
+ * size. Null characters are appended if the file is extended.
+ *
+ * @param pFile File to truncate
+ * @param iSize The new size of the file
+ * @returns true on success or false on failure
+ */
+bool File_Truncate(FILE *pFile, off_t iSize);
+
+/**
+ * File_Read
+ *
+ * Reads from the given file handle into the given buffer
+ *
+ * @param pFile File to read from
+ * @param pBuffer Buffer to write to
+ * @param uCount Number of bytes to read
+ * @returns Number of bytes read
+ */
+size_t File_Read(FILE *pFile,void *pBuffer,size_t uCount);
+
+/**
+ * File_Write
+ *
+ * Writes data to the given file handle
+ *
+ * @param pFile File to write to
+ * @param pBuffer Buffer to read from
+ * @param uCount Number of bytes to write
+ * @returns Number of bytes written
+ */
+size_t File_Write(FILE *pFile,const void *pBuffer,size_t uCount);
+
+/**
  * File_WriteFill
  *
  * Writes a single byte a specified number of times to

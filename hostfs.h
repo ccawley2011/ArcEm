@@ -19,18 +19,5 @@ extern void hostfs(ARMul_State *state);
 extern void hostfs_init(void);
 extern void hostfs_reset(void);
 
-#ifdef __amigaos4__
-#include <sys/_types.h>
-typedef _off64_t off64_t;
-#endif
-
-#if defined __amigaos3__ || defined _MSC_VER || defined __WATCOMC__
-typedef long off64_t;
-
-#define ftello64 ftell
-#define fseeko64 fseek
-#define fopen64 fopen
-#endif
-
 
 #endif

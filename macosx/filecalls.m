@@ -38,7 +38,7 @@ FILE *File_OpenAppData(const char *sName, const char *sMode)
                                     attributes:nil
                                     error:nil];
 
-            f = fopen([filePath fileSystemRepresentation], sMode);
+            f = File_Open([filePath fileSystemRepresentation], sMode);
             if (f)
                 return f;
         }

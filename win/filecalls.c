@@ -68,7 +68,7 @@ FILE *File_OpenAppData(const char *sName, const char *sMode)
     CreateDirectoryA(sPath, NULL);
 
     strcat(sPath, sName);
-    f = fopen(sPath, sMode);
+    f = File_Open(sPath, sMode);
 
     free(sPath);
     return f;

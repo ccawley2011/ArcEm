@@ -42,7 +42,7 @@ FILE *File_OpenAppData(const char *sName, const char *sMode)
 
     SDL_strlcpy(sPath, sAppData, sLen);
     SDL_strlcat(sPath, sName, sLen);
-    f = fopen(sPath, sMode);
+    f = File_Open(sPath, sMode);
 
     SDL_free(sPath);
     SDL_free(sAppData);

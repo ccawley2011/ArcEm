@@ -63,8 +63,6 @@ int __riscosify_control = 0;
 #define HOST_DIR_SEP_CHAR '.'
 #define HOST_DIR_SEP_STR "."
 
-#define NO_OPEN64
-
 #else /* __riscos__ */
 
 #define HOST_DIR_SEP_CHAR '/'
@@ -73,14 +71,6 @@ int __riscosify_control = 0;
 #endif /* !__riscos__ */
 
 #include "hostfs.h"
-
-#if defined NO_OPEN64 || defined __MACH__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __NetBSD__ || defined __HAIKU__
-/* ftello64/fseeko64 don't exist, but ftello/fseeko do. Likewise, we need to use regular fopen. */
-#define ftello64 ftello
-#define fseeko64 fseeko
-#define fopen64 fopen
-#define off64_t off_t
-#endif
 
 #ifdef HOSTFS_ARCEM
 
@@ -111,11 +101,6 @@ static char HOSTFS_ROOT[512];
    macro allows us to use one API to work with both variants */
 #if (defined _WIN32 || defined __WATCOMC__) && ! defined __CYGWIN__
 # define mkdir(name, mode) _mkdir(name)
-#endif
-
-/* Visual Studio doesn't have ftruncate; use _chsize instead */
-#if defined _MSC_VER || defined __WATCOMC__
-# define ftruncate _chsize
 #endif
 
 /** Registration states of HostFS module with backend code */
@@ -1064,7 +1049,7 @@ hostfs_open(ARMul_State *state)
   switch (state->Reg[0]) {
   case OPEN_MODE_READ:
     dbug_hostfs("\tOpen for read\n");
-    open_file[idx] = fopen64(host_pathname, "rb");
+    open_file[idx] = File_Open(host_pathname, "rb");
     state->Reg[0] = FILE_INFO_WORD_READ_OK;
     break;
 
@@ -1074,7 +1059,7 @@ hostfs_open(ARMul_State *state)
 
   case OPEN_MODE_UPDATE:
     dbug_hostfs("\tOpen for update\n");
-    open_file[idx] = fopen64(host_pathname, "rb+");
+    open_file[idx] = File_Open(host_pathname, "rb+");
     state->Reg[0] = (uint32_t) (FILE_INFO_WORD_READ_OK | FILE_INFO_WORD_WRITE_OK);
     break;
   }
@@ -1087,9 +1072,7 @@ hostfs_open(ARMul_State *state)
   }
 
   /* Find the extent of the file */
-  fseeko64(open_file[idx], 0, SEEK_END);
-  state->Reg[3] = (ARMword) ftello64(open_file[idx]);
-  rewind(open_file[idx]); /* Return to start */
+  state->Reg[3] = (ARMword) File_Size(open_file[idx]);
 
   dbug_hostfs("\tFile opened OK, handle %u, size %u\n",idx,state->Reg[3]);
 
@@ -1114,7 +1097,7 @@ hostfs_getbytes(ARMul_State *state)
   dbug_hostfs("\tr4 = %u (file offset from which to get data)\n",
               state->Reg[4]);
 
-  fseeko64(f, (off64_t) state->Reg[4], SEEK_SET);
+  File_Seek(f, (off_t) state->Reg[4]);
 
   File_ReadRAM(state, f, ptr, state->Reg[3]);
 }
@@ -1134,7 +1117,7 @@ hostfs_putbytes(ARMul_State *state)
   dbug_hostfs("\tr4 = %u (file offset at which to put data)\n",
               state->Reg[4]);
 
-  fseeko64(f, (off64_t) state->Reg[4], SEEK_SET);
+  File_Seek(f, (off_t) state->Reg[4]);
 
   File_WriteRAM(state, f, ptr, state->Reg[3]);
 }
@@ -1143,7 +1126,6 @@ static void
 hostfs_args_3_write_file_extent(ARMul_State *state)
 {
   FILE *f;
-  int fd;
 
   assert(state);
 
@@ -1153,30 +1135,13 @@ hostfs_args_3_write_file_extent(ARMul_State *state)
   dbug_hostfs("\tr1 = %u (our file handle)\n", state->Reg[1]);
   dbug_hostfs("\tr2 = %u (new extent)\n", state->Reg[2]);
 
-  /* Flush any pending I/O before moving to low-level I/O functions */
-  if (fflush(f)) {
-    warn_hostfs("hostfs_args_3_write_file_extent() bad fflush(): %s %d\n",
-                strerror(errno), errno);
-    return;
-  }
-
-  /* Obtain underlying file descriptor for this FILE* */
-  fd = fileno(f);
-  if (fd < 0) {
-    warn_hostfs("hostfs_args_3_write_file_extent() bad fd: %s %d\n",
-                strerror(errno), errno);
-    return;
-  }
-
-#ifndef __amigaos3__ /* no ftruncate in libnix - not sure if this is a critical function */
   /* Set file to required extent */
   /* FIXME Not defined if file is increased in size */
-  if (ftruncate(fd, (off_t) state->Reg[2])) {
-    warn_hostfs("hostfs_args_3_write_file_extent() bad ftruncate(): %s %d\n",
+  if (!File_Truncate(f, (off_t) state->Reg[2])) {
+    warn_hostfs("hostfs_args_3_write_file_extent() could not truncate file: %s %d\n",
                 strerror(errno), errno);
     return;
   }
-#endif
 }
 
 static void
@@ -1192,9 +1157,7 @@ hostfs_args_7_ensure_file_size(ARMul_State *state)
   dbug_hostfs("\tr1 = %u (our file handle)\n", state->Reg[1]);
   dbug_hostfs("\tr2 = %u (size of file to ensure)\n", state->Reg[2]);
 
-  fseeko64(f, 0, SEEK_END);
-
-  state->Reg[2] = (ARMword) ftello64(f);
+  state->Reg[2] = (ARMword) File_Size(f);
 }
 
 static void
@@ -1212,7 +1175,7 @@ hostfs_args_8_write_zeros(ARMul_State *state)
   dbug_hostfs("\tr2 = %u (file offset at which to write)\n", state->Reg[2]);
   dbug_hostfs("\tr3 = %u (number of zero bytes to write)\n", state->Reg[3]);
 
-  fseeko64(f, (off64_t) state->Reg[2], SEEK_SET);
+  File_Seek(f, (off_t) state->Reg[2]);
 
   bytes_written = File_WriteFill(f,0,state->Reg[3]);
   if(bytes_written != state->Reg[3])
@@ -1269,7 +1232,7 @@ hostfs_close(ARMul_State *state)
   dbug_hostfs("\tr3 = 0x%08x (new exec address)\n", state->Reg[3]);
 
   /* Close the file */
-  fclose(f);
+  File_Close(f);
 
   /* Free up the open_file[] entry */
   open_file[state->Reg[1]] = NULL;
@@ -1350,7 +1313,7 @@ hostfs_write_file(ARMul_State *state, bool with_data)
     return;
   }
 
-  f = fopen64(new_pathname, "wb");
+  f = File_Open(new_pathname, "wb");
   if (!f) {
     state->Reg[9] = errno_to_hostfs_error(new_pathname,__FUNCTION__,"open");
     return;
@@ -1369,7 +1332,7 @@ hostfs_write_file(ARMul_State *state, bool with_data)
     state->Reg[9] = HOSTFS_ERROR_UNKNOWN;
   }
 
-  fclose(f); /* TODO check for errors */
+  File_Close(f); /* TODO check for errors */
 
   state->Reg[6] = 0; /* TODO */
 
@@ -1618,7 +1581,7 @@ hostfs_file_255_load_file(ARMul_State *state)
   state->Reg[5] = object_info.attribs;
   state->Reg[6] = 0; /* TODO */
 
-  f = fopen64(host_pathname, "rb");
+  f = File_Open(host_pathname, "rb");
   if (!f) {
     state->Reg[9] = errno_to_hostfs_error(host_pathname,__FUNCTION__,"open");
     return;
@@ -1632,7 +1595,7 @@ hostfs_file_255_load_file(ARMul_State *state)
     state->Reg[9] = HOSTFS_ERROR_UNKNOWN;
   }
 
-  fclose(f);
+  File_Close(f);
 }
 
 static void
@@ -2366,7 +2329,7 @@ hostfs_reset(void)
   /* Close any open files */
   for (i = 1; i < (MAX_OPEN_FILES + 1); i++) {
     if (open_file[i]) {
-      fclose(open_file[i]);
+      File_Close(open_file[i]);
       open_file[i] = NULL;
     }
   }

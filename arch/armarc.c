@@ -157,9 +157,9 @@ static void DumpHandler(int sig) {
 
   /* Physical RAM dump */
 #ifdef __riscos__
-  res=fopen("<arcem$dir>.memdump","wb");
+  res=File_Open("<arcem$dir>.memdump","wb");
 #else
-  res=fopen("memdump","wb");
+  res=File_Open("memdump","wb");
 #endif
 
   if (res==NULL) {
@@ -167,9 +167,9 @@ static void DumpHandler(int sig) {
     return;
   };
 
-  fwrite(MEMC.PhysRam,1,MEMC.RAMSize,res);
+  File_Write(res,MEMC.PhysRam,MEMC.RAMSize);
 
-  fclose(res);
+  File_Close(res);
 
 #ifdef __riscos__
   __write_backtrace(sig);
@@ -269,21 +269,17 @@ ARMul_MemoryInit(ARMul_State *state)
     chdir(arcemDir);
   }
 #endif
-  if (ROMFile = fopen(CONFIG.sRomImageName, "rb"), ROMFile == NULL) {
+  if (ROMFile = File_Open(CONFIG.sRomImageName, "rb"), ROMFile == NULL) {
     ControlPane_Error(2,"Couldn't open ROM file '%s'\n", CONFIG.sRomImageName);
   }
 
   /* Find the rom file size */
-  fseek(ROMFile, 0l, SEEK_END);
-
-  MEMC.ROMHighSize = (((ARMword) ftell(ROMFile))+4095)&~4095;
+  MEMC.ROMHighSize = (((ARMword) File_Size(ROMFile))+4095)&~4095;
   MEMC.ROMHighMask = MEMC.ROMHighSize-1;
 
   if(MEMC.ROMHighSize & MEMC.ROMHighMask) {
     ControlPane_Error(3,"ROM High isn't power of 2 in size\n");
   }
-
-  fseek(ROMFile, 0l, SEEK_SET);
 
 #if defined(EXTNROM_SUPPORT)
   /* Add the space required by an Extension Rom */
@@ -322,7 +318,7 @@ ARMul_MemoryInit(ARMul_State *state)
   File_ReadEmu(ROMFile,(uint8_t *) MEMC.ROMHigh,MEMC.ROMHighSize);
 
   /* Close System ROM Image File */
-  fclose(ROMFile);
+  File_Close(ROMFile);
 
   /* Create Space for extension ROM in ROMLow */
   if (extnrom_size) {
