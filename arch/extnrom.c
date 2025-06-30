@@ -62,8 +62,7 @@ uint32_t
 extnrom_calculate_size(const char *dir, uint32_t *entry_count)
 {
   Directory *hDir;
-  FileInfo hFileInfo;
-  char *sFilename;
+  DirEntry *hDirEntry;
   uint32_t required_size = 0;
 
   assert(entry_count != NULL);
@@ -81,37 +80,27 @@ extnrom_calculate_size(const char *dir, uint32_t *entry_count)
     }
   }
 
-  while ((sFilename = Directory_GetNextEntry(hDir, &hFileInfo)) != NULL) {
-    char *path;
-    long ulFilesize;
-    FILE *f;
+  while ((hDirEntry = Directory_GetNextEntry(hDir)) != NULL) {
+    const char *sFilename;
+    ObjectType eType;
+    Offset ulFilesize;
 
     /* Ignore hidden entries - those starting with '.' */
+    sFilename = Directory_GetEntryName(hDirEntry);
     if (sFilename[0] == '.') {
       continue;
     }
 
-    if (!hFileInfo.bIsRegularFile) {
+    eType = Directory_GetEntryType(hDirEntry);
+    if (!(eType & OBJECT_TYPE_FILE)) {
       /* Not a regular file - skip it */
       continue;
     }
 
-    /* Construct relative path to the entry */
-    path = Directory_GetFullPath(hDir, sFilename);
-
-    f = fopen(path, "rb");
-    if (!f) {
-      warn_data("Could not open file \'%s\': %s\n",
-                path, strerror(errno));
-      free(path);
+    if (!Directory_GetEntrySize(hDirEntry, &ulFilesize)) {
+      /* Could not get file size - skip it */
       continue;
     }
-
-    fseek(f, 0, SEEK_END);
-    ulFilesize = ftell(f);
-
-    fclose(f);
-    free(path);
 
     /* Add on size of file */
     required_size += ROUND_UP_TO_4(ulFilesize);
@@ -152,8 +141,7 @@ extnrom_load(const char *dir, uint32_t size, uint32_t entry_count, void *address
   ARMword *start_addr = address;
   ARMword *chunk, *modules;
   Directory *hDir;
-  FileInfo hFileInfo;
-  char *sFilename;
+  DirEntry *hDirEntry;
   uint32_t size_in_words = size / 4;
 
   assert(((size != 0) && (entry_count != 0)) ||
@@ -223,36 +211,36 @@ extnrom_load(const char *dir, uint32_t size, uint32_t entry_count, void *address
   modules += ROUND_UP_TO_4(strlen(DESCRIPTION_STRING) + 1) / 4;
 
   /* Process the modules */
-  while ((sFilename = Directory_GetNextEntry(hDir, &hFileInfo)) != NULL) {
-    char *path;
+  while ((hDirEntry = Directory_GetNextEntry(hDir)) != NULL) {
+    const char *sFilename;
+    ObjectType eType;
     ARMword offset;
-    ARMword ulFilesize;
+    Offset ulFilesize;
     FILE *f;
 
     /* Ignore hidden entries - those starting with '.' */
+    sFilename = Directory_GetEntryName(hDirEntry);
     if (sFilename[0] == '.') {
       continue;
     }
 
-    if (!hFileInfo.bIsRegularFile) {
+    eType = Directory_GetEntryType(hDirEntry);
+    if (!(eType & OBJECT_TYPE_FILE)) {
       /* Not a regular file - skip it */
       continue;
     }
 
-    /* Construct relative path to the entry */
-    path = Directory_GetFullPath(hDir, sFilename);
-
-    f = fopen(path, "rb");
-    if (!f) {
-      warn_data("Could not open file \'%s\': %s\n",
-                path, strerror(errno));
-      free(path);
+    if (!Directory_GetEntrySize(hDirEntry, &ulFilesize)) {
+      /* Could not get file size - skip it */
       continue;
     }
 
-    fseek(f, 0, SEEK_END);
-    ulFilesize = (ARMword)ftell(f);
-    fseek(f, 0, SEEK_SET);
+    f = Directory_OpenEntryFile(hDirEntry, "rb");
+    if (!f) {
+      warn_data("Could not open module \'%s\': %s\n",
+                sFilename, strerror(errno));
+      continue;
+    }
 
     /* Offset of where this module will be placed in the ROM */
     offset = (ARMword)((modules - start_addr) * 4) + 4;
@@ -269,16 +257,14 @@ extnrom_load(const char *dir, uint32_t size, uint32_t entry_count, void *address
     modules++;
 
     /* Load module */
-    if (File_ReadEmu(f, (uint8_t *)modules, ulFilesize) != ulFilesize) {
-      warn_data("Error while loading file \'%s\': %s\n",
-                path, strerror(errno));
+    if (File_ReadEmu(f, (uint8_t *)modules, ulFilesize) != (size_t)ulFilesize) {
+      warn_data("Error while loading module \'%s\': %s\n",
+                sFilename, strerror(errno));
       fclose(f);
-      free(path);
       continue;
     }
 
     fclose(f);
-    free(path);
 
     /* Move chunk and module pointers on */
     chunk += 2;

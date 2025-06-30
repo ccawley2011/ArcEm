@@ -18,22 +18,21 @@
 
 
 /* The windows version of the directory struct */
-struct Directory_s {
-  char *sPath;
-  size_t sPathLen;
+struct DirEntry_s {
   WIN32_FIND_DATAA w32fd;
   HANDLE hFile;
   bool bFirstEntry;
+
+  Directory *hDirectory;
 };
 
-/**
- * Directory_Open
- *
- * Open a directory so that it's contents can be scanned
- *
- * @param sPath Location of directory to scan
- * @returns Directory handle or NULL on failure
- */
+struct Directory_s {
+  char *sPath;
+  size_t sPathLen;
+
+  DirEntry hDirEntry;
+};
+
 Directory *Directory_Open(const char *sPath)
 {
   bool bNeedsEndSlash = 0;
@@ -54,10 +53,11 @@ Directory *Directory_Open(const char *sPath)
     return NULL;
   }
 
-  hDir->bFirstEntry = true;
-  hDir->hFile       = NULL;
-  hDir->sPathLen    = sPathLen;
-  hDir->sPath       = (char *)(hDir + 1);
+  hDir->hDirEntry.hDirectory  = hDir;
+  hDir->hDirEntry.bFirstEntry = true;
+  hDir->hDirEntry.hFile       = NULL;
+  hDir->sPathLen              = sPathLen;
+  hDir->sPath                 = (char *)(hDir + 1);
 
   strcpy(hDir->sPath, sPath);
   if(bNeedsEndSlash) {
@@ -68,68 +68,37 @@ Directory *Directory_Open(const char *sPath)
   return hDir;
 }
 
-/**
- * Directory_Close
- *
- * Close a previously opened Directory
- *
- * @param hDirectory Directory to close
- */
 void Directory_Close(Directory *hDirectory)
 {
-  FindClose(hDirectory->hFile);
+  FindClose(hDirectory->hDirEntry.hFile);
   free(hDirectory);
 
 }
 
-/**
- * Directory_GetNextEntry
- *
- * Get the next entry in a directory
- *
- * @param hDirectory pointer to Directory to get entry from
- * @returns String of filename or NULL on EndOfDirectory
- */
-char *Directory_GetNextEntry(Directory *hDirectory, FileInfo *phFileInfo)
+DirEntry *Directory_GetNextEntry(Directory *hDirectory)
 {
+  DirEntry *hDirEntry = &hDirectory->hDirEntry;
 
-  if(hDirectory->bFirstEntry) {
-    hDirectory->hFile = FindFirstFileA(hDirectory->sPath, &hDirectory->w32fd);
-    hDirectory->bFirstEntry = false;
+  if(hDirEntry->bFirstEntry) {
+    hDirEntry->hFile = FindFirstFileA(hDirectory->sPath, &hDirEntry->w32fd);
+    hDirEntry->bFirstEntry = false;
 
-    if(INVALID_HANDLE_VALUE == hDirectory->hFile) {
+    if(INVALID_HANDLE_VALUE == hDirEntry->hFile) {
       return NULL;
     }
   } else {
     /* second or later entry */
-    if(0 == FindNextFileA(hDirectory->hFile, &hDirectory->w32fd)) {
+    if(0 == FindNextFileA(hDirEntry->hFile, &hDirEntry->w32fd)) {
       return NULL;
     }
   }
 
-  if (phFileInfo) {
-    if (hDirectory->w32fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-      phFileInfo->bIsDirectory   = true;
-      phFileInfo->bIsRegularFile = false;
-    } else {
-      /* IMPROVE guess, if not a directory then we are a regular file */
-      phFileInfo->bIsDirectory   = false;
-      phFileInfo->bIsRegularFile = true;
-    }
-  }
-
-  return hDirectory->w32fd.cFileName;
+  return hDirEntry;
 }
 
-/**
- * Directory_GetFullPath
- *
- * Get the full path of a file in a directory
- *
- * @param hDirectory pointer to Directory to get the base path from
- * @returns String of the full path or NULL on EndOfDirectory
- */
-char *Directory_GetFullPath(Directory *hDirectory, const char *leaf) {
+static char *Directory_GetEntryPath(DirEntry *hDirEntry) {
+  Directory *hDirectory = hDirEntry->hDirectory;
+  const char *leaf = hDirEntry->w32fd.cFileName;
   size_t len = hDirectory->sPathLen - 3 + strlen(leaf);
   char *path = malloc(len + 1);
   if (!path) {
@@ -142,13 +111,52 @@ char *Directory_GetFullPath(Directory *hDirectory, const char *leaf) {
   return path;
 }
 
-/**
- * Return disk space information about a file system.
- *
- * @param path Pathname of object within file system
- * @param d    Pointer to disk_info structure that will be filled in
- * @return     On success true is returned, on error false is returned
- */
+FILE *Directory_OpenEntryFile(DirEntry *hDirEntry, const char *sMode)
+{
+  char *sPath;
+  FILE *f;
+
+  sPath = Directory_GetEntryPath(hDirEntry);
+  if (!sPath) {
+    return NULL;
+  }
+
+  f = fopen(sPath, sMode);
+  if (!f) {
+    warn_data("Warning: could not fopen() entry \'%s\': %s\n",
+              sPath, strerror(errno));
+    free(sPath);
+    return NULL;
+  }
+
+  free(sPath);
+  return f;
+}
+
+const char *Directory_GetEntryName(DirEntry *hDirEntry)
+{
+  assert(hDirEntry);
+  return hDirEntry->w32fd.cFileName;
+}
+
+ObjectType Directory_GetEntryType(DirEntry *hDirEntry)
+{
+  assert(hDirEntry);
+  if (hDirEntry->w32fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
+    return OBJECT_TYPE_DIRECTORY;
+  } else {
+    return OBJECT_TYPE_FILE;
+  }
+}
+
+bool Directory_GetEntrySize(DirEntry *hDirEntry, Offset *ulFilesize)
+{
+  assert(hDirEntry);
+  assert(ulFilesize);
+  *ulFilesize = hDirEntry->w32fd.nFileSizeLow | ((Offset)hDirEntry->w32fd.nFileSizeHigh << 32);
+  return true;
+}
+
 bool Disk_GetInfo(const char *path, DiskInfo *d)
 {
 	ULARGE_INTEGER free, total;

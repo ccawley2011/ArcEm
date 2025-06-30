@@ -127,13 +127,6 @@ typedef enum {
   HOSTFS_STATE_IGNORE       /**< Ignoring activity after failing to register */
 } HostFSState;
 
-enum OBJECT_TYPE {
-  OBJECT_TYPE_NOT_FOUND = 0,
-  OBJECT_TYPE_FILE      = 1,
-  OBJECT_TYPE_DIRECTORY = 2,
-  OBJECT_TYPE_IMAGEFILE = 3
-};
-
 enum OPEN_MODE {
   OPEN_MODE_READ               = 0,
   OPEN_MODE_CREATE_OPEN_UPDATE = 1, /* Only used by RISC OS 2 */

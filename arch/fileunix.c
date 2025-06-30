@@ -23,22 +23,22 @@
 #include "dbugsys.h"
 
 /* The POSIX version of the directory struct */
+struct DirEntry_s {
+  struct dirent *hDirent;
+  Directory *hDirectory;
+
+  struct stat hStat;
+  bool bHasStat;
+};
+
 struct Directory_s {
   DIR *hDir;
   char *sPath;
   size_t sPathLen;
+
+  DirEntry hDirEntry;
 };
 
-static bool File_GetInfo(const char *sPath, FileInfo *phFileInfo);
-
-/**
- * Directory_Open
- *
- * Open a directory so that it's contents can be scanned
- *
- * @param sPath Location of directory to scan
- * @returns Directory handle or NULL on failure
- */
 Directory *Directory_Open(const char *sPath)
 {
   Directory *hDirectory;
@@ -50,13 +50,13 @@ Directory *Directory_Open(const char *sPath)
   sPathLen = strlen(sPath);
   hDirectory = malloc(sizeof(Directory) + sPathLen + 1);
 
-  if(NULL == hDirectory) {
+  if(NULL == hDirectory)
     return NULL;
-  } else {
-    hDirectory->sPathLen = sPathLen;
-    hDirectory->sPath = (char *)(hDirectory + 1);
-    strcpy(hDirectory->sPath, sPath);
-  }
+
+  hDirectory->hDirEntry.hDirectory = hDirectory;
+  hDirectory->sPathLen = sPathLen;
+  hDirectory->sPath = (char *)(hDirectory + 1);
+  strcpy(hDirectory->sPath, sPath);
 
   hDirectory->hDir = opendir(sPath);
 
@@ -68,69 +68,31 @@ Directory *Directory_Open(const char *sPath)
   }
 }
 
-/**
- * Directory_Close
- *
- * Close a previously opened Directory
- *
- * @param hDirectory Directory to close
- */
 void Directory_Close(Directory *hDirectory)
 {
   closedir(hDirectory->hDir);
   free(hDirectory);
 }
 
-/**
- * Directory_GetNextEntry
- *
- * Get the next entry in a directory
- *
- * @param hDirectory pointer to Directory to get entry from
- * @returns String of filename or NULL on EndOfDirectory
- */
-char *Directory_GetNextEntry(Directory *hDirectory, FileInfo *phFileInfo)
+DirEntry *Directory_GetNextEntry(Directory *hDirectory)
 {
-  struct dirent *phDirEntry;
-  
+  DirEntry *hDirEntry;
   assert(hDirectory);
-  
-  phDirEntry = readdir(hDirectory->hDir);
-  if(!phDirEntry) {
+
+  hDirEntry = &hDirectory->hDirEntry;
+  hDirEntry->hDirent = readdir(hDirectory->hDir);
+  if(!hDirEntry->hDirent) {
     return NULL;
   }
 
-  if (phFileInfo) {
-    phFileInfo->bIsRegularFile = false;
-    phFileInfo->bIsDirectory   = false;
-
-#ifdef _DIRENT_HAVE_D_TYPE
-    if (phDirEntry->d_type == DT_REG || phDirEntry->d_type == DT_DIR) {
-      phFileInfo->bIsRegularFile = (phDirEntry->d_type == DT_REG);
-      phFileInfo->bIsDirectory   = (phDirEntry->d_type == DT_DIR);
-    } else
-#endif
-    {
-      char *path = Directory_GetFullPath(hDirectory, phDirEntry->d_name);
-      if (path) {
-        File_GetInfo(path, phFileInfo);
-        free(path);
-      }
-    }
-  }
-
-  return phDirEntry->d_name;
+  hDirEntry->bHasStat = false;
+  return &hDirectory->hDirEntry;
 }
 
-/**
- * Directory_GetFullPath
- *
- * Get the full path of a file in a directory
- *
- * @param hDirectory pointer to Directory to get the base path from
- * @returns String of the full path or NULL on EndOfDirectory
- */
-char *Directory_GetFullPath(Directory *hDirectory, const char *leaf) {
+static char *Directory_GetEntryPath(DirEntry *hDirEntry)
+{
+  Directory *hDirectory = hDirEntry->hDirectory;
+  const char *leaf = hDirEntry->hDirent->d_name;
   size_t len = hDirectory->sPathLen + strlen(leaf) + 1;
   char *path = malloc(len + 1);
   if (!path) {
@@ -143,51 +105,100 @@ char *Directory_GetFullPath(Directory *hDirectory, const char *leaf) {
   return path;
 }
 
-/**
- * File_GetInfo
- *
- * Fills in lots of useful info about the passed in file
- *
- * @param sPath Path to file to check
- * @param phFileInfo pointer to FileInfo struct to fill in
- * @returns false on failure true on success
- */
-static bool File_GetInfo(const char *sPath, FileInfo *phFileInfo)
+static struct stat *Directory_Stat(DirEntry *hDirEntry)
 {
-  struct stat hEntryInfo;
+  char *sPath;
 
-  assert(sPath);
-  assert(phFileInfo);
+  if (hDirEntry->bHasStat)
+    return &hDirEntry->hStat;
 
-  if (stat(sPath, &hEntryInfo) != 0) {
+  sPath = Directory_GetEntryPath(hDirEntry);
+  if (!sPath) {
+    return NULL;
+  }
+
+  if (stat(sPath, &hDirEntry->hStat) != 0) {
     warn_data("Warning: could not stat() entry \'%s\': %s\n",
-            sPath, strerror(errno));
+              sPath, strerror(errno));
+    free(sPath);
+    return NULL;
+  }
+
+  free(sPath);
+
+  hDirEntry->bHasStat = true;
+  return &hDirEntry->hStat;
+}
+
+FILE *Directory_OpenEntryFile(DirEntry *hDirEntry, const char *sMode)
+{
+  char *sPath;
+  FILE *f;
+
+  sPath = Directory_GetEntryPath(hDirEntry);
+  if (!sPath) {
+    return NULL;
+  }
+
+  f = fopen(sPath, sMode);
+  if (!f) {
+    warn_data("Warning: could not fopen() entry \'%s\': %s\n",
+              sPath, strerror(errno));
+    free(sPath);
+    return NULL;
+  }
+
+  free(sPath);
+  return f;
+}
+
+const char *Directory_GetEntryName(DirEntry *hDirEntry)
+{
+  assert(hDirEntry);
+  return hDirEntry->hDirent->d_name;
+}
+
+ObjectType Directory_GetEntryType(DirEntry *hDirEntry)
+{
+  struct stat *hStat;
+  assert(hDirEntry);
+
+#ifdef _DIRENT_HAVE_D_TYPE
+  if (hDirEntry->hDirent->d_type == DT_REG) {
+    return OBJECT_TYPE_FILE;
+  } else if (hDirEntry->hDirent->d_type == DT_DIR) {
+    return OBJECT_TYPE_DIRECTORY;
+  } else
+#endif
+  {
+    if ((hStat = Directory_Stat(hDirEntry)) == NULL)
+      return OBJECT_TYPE_NOT_FOUND;
+
+    if (S_ISREG(hStat->st_mode)) {
+      return OBJECT_TYPE_FILE;
+    } else if (S_ISDIR(hStat->st_mode)) {
+      return OBJECT_TYPE_DIRECTORY;
+    } else {
+      return OBJECT_TYPE_NOT_FOUND;
+    }
+  }
+}
+
+bool Directory_GetEntrySize(DirEntry *hDirEntry, Offset *ulFilesize)
+{
+  struct stat *hStat;
+  assert(hDirEntry);
+  assert(ulFilesize);
+
+  if ((hStat = Directory_Stat(hDirEntry)) == NULL)
     return false;
-  }
-  
-  /* Initialise components */
-  phFileInfo->bIsRegularFile = false;
-  phFileInfo->bIsDirectory   = false;
+  if (hStat->st_size < 0)
+    return false;
 
-  if (S_ISREG(hEntryInfo.st_mode)) {
-    phFileInfo->bIsRegularFile = true;
-  }
-
-  if (S_ISDIR(hEntryInfo.st_mode)) {
-    phFileInfo->bIsDirectory = true;
-  }
-  
-  /* Success! */
+  *ulFilesize = hStat->st_size;
   return true;
 }
 
-/**
- * Return disk space information about a file system.
- *
- * @param path Pathname of object within file system
- * @param d    Pointer to disk_info structure that will be filled in
- * @return     On success true is returned, on error false is returned
- */
 bool Disk_GetInfo(const char *path, DiskInfo *d)
 {
 	struct statvfs s;

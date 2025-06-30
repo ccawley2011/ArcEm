@@ -7,6 +7,7 @@
 
 /* ansi includes */
 #include <assert.h>
+#include <errno.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,11 +18,11 @@
 
 /* application includes */
 #include "filecalls.h"
+#include "dbugsys.h"
 
 /* The RISC OS version of the directory struct */
-struct Directory_s {
-  char *sPath;
-  size_t sPathLen;
+struct DirEntry_s {
+  Directory *hDirectory;
   int gbpb_entry;
 
   struct {
@@ -34,14 +35,13 @@ struct Directory_s {
   } gbpb_buffer;
 };
 
-/**
- * Directory_Open
- *
- * Open a directory so that it's contents can be scanned
- *
- * @param sPath Location of directory to scan
- * @returns Directory handle or NULL on failure
- */
+struct Directory_s {
+  char *sPath;
+  size_t sPathLen;
+
+  DirEntry hDirEntry;
+};
+
 Directory *Directory_Open(const char *sPath)
 {
   Directory *hDirectory;
@@ -57,6 +57,7 @@ Directory *Directory_Open(const char *sPath)
     return NULL;
 
   memset(hDirectory, 0, sizeof(*hDirectory));
+  hDirectory->hDirEntry.hDirectory = hDirectory;
   hDirectory->sPathLen = sPathLen;
   hDirectory->sPath = (char *)(hDirectory + 1);
   strcpy(hDirectory->sPath, sPath);
@@ -64,67 +65,34 @@ Directory *Directory_Open(const char *sPath)
   return hDirectory;
 }
 
-/**
- * Directory_Close
- *
- * Close a previously opened Directory
- *
- * @param hDirectory Directory to close
- */
 void Directory_Close(Directory *hDirectory)
 {
   free(hDirectory);
 }
 
-/**
- * Directory_GetNextEntry
- *
- * Get the next entry in a directory
- *
- * @param hDirectory pointer to Directory to get entry from
- * @returns String of filename or NULL on EndOfDirectory
- */
-char *Directory_GetNextEntry(Directory *hDirectory, FileInfo *phFileInfo)
+DirEntry *Directory_GetNextEntry(Directory *hDirectory)
 {
   _kernel_oserror *err;
+  DirEntry *hDirEntry;
   int found;
 
   assert(hDirectory);
 
+  hDirEntry = &hDirectory->hDirEntry;
   err = _swix(OS_GBPB, _INR(0,6)|_OUTR(3,4), 10,
-              hDirectory->sPath, &hDirectory->gbpb_buffer, 1,
-              hDirectory->gbpb_entry, sizeof(hDirectory->gbpb_buffer),
-              NULL, &found, &hDirectory->gbpb_entry);
+              hDirectory->sPath, &hDirEntry->gbpb_buffer, 1,
+              hDirEntry->gbpb_entry, sizeof(hDirEntry->gbpb_buffer),
+              NULL, &found, &hDirEntry->gbpb_entry);
   if(err || !found) {
     return NULL;
   }
 
-  if (phFileInfo) {
-    /* Initialise components */
-    phFileInfo->bIsRegularFile = false;
-    phFileInfo->bIsDirectory   = false;
-
-    if (hDirectory->gbpb_buffer.type == 1 || hDirectory->gbpb_buffer.type == 3) {
-      phFileInfo->bIsRegularFile = true;
-    }
-
-    if (hDirectory->gbpb_buffer.type == 2 || hDirectory->gbpb_buffer.type == 3) {
-      phFileInfo->bIsDirectory = true;
-    }
-  }
-
-  return hDirectory->gbpb_buffer.name;
+  return hDirEntry;
 }
 
-/**
- * Directory_GetFullPath
- *
- * Get the full path of a file in a directory
- *
- * @param hDirectory pointer to Directory to get the base path from
- * @returns String of the full path or NULL on EndOfDirectory
- */
-char *Directory_GetFullPath(Directory *hDirectory, const char *leaf) {
+static char *Directory_GetEntryPath(DirEntry *hDirEntry) {
+  Directory *hDirectory = hDirEntry->hDirectory;
+  const char *leaf = hDirEntry->gbpb_buffer.name;
   size_t len = hDirectory->sPathLen + strlen(leaf) + 1;
   char *path = malloc(len + 1);
   if (!path) {
@@ -137,13 +105,48 @@ char *Directory_GetFullPath(Directory *hDirectory, const char *leaf) {
   return path;
 }
 
-/**
- * Return disk space information about a file system.
- *
- * @param path Pathname of object within file system
- * @param d    Pointer to disk_info structure that will be filled in
- * @return     On success true is returned, on error false is returned
- */
+FILE *Directory_OpenEntryFile(DirEntry *hDirEntry, const char *sMode)
+{
+  char *sPath;
+  FILE *f;
+
+  sPath = Directory_GetEntryPath(hDirEntry);
+  if (!sPath) {
+    return NULL;
+  }
+
+  f = fopen(sPath, sMode);
+  if (!f) {
+    warn_data("Warning: could not fopen() entry \'%s\': %s\n",
+              sPath, strerror(errno));
+    free(sPath);
+    return NULL;
+  }
+
+  free(sPath);
+  return f;
+}
+
+const char *Directory_GetEntryName(DirEntry *hDirEntry)
+{
+  assert(hDirEntry);
+  return hDirEntry->gbpb_buffer.name;
+}
+
+ObjectType Directory_GetEntryType(DirEntry *hDirEntry)
+{
+  assert(hDirEntry);
+  return hDirEntry->gbpb_buffer.type;
+}
+
+bool Directory_GetEntrySize(DirEntry *hDirEntry, Offset *ulFilesize)
+{
+  assert(hDirEntry);
+  assert(ulFilesize);
+  *ulFilesize = hDirEntry->gbpb_buffer.length;
+  return true;
+}
+
 bool Disk_GetInfo(const char *path, DiskInfo *d)
 {
   _kernel_oserror *err;

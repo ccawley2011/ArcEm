@@ -8,13 +8,17 @@
 #include "../armdefs.h"
 #include <stdio.h>
 
-typedef struct Directory_s Directory;
+typedef uint64_t Offset;
 
-typedef struct FileInfo
-{
-  bool bIsRegularFile;
-  bool bIsDirectory;
-} FileInfo;
+typedef struct Directory_s Directory;
+typedef struct DirEntry_s DirEntry;
+
+typedef enum OBJECT_TYPE {
+	OBJECT_TYPE_NOT_FOUND = 0,
+	OBJECT_TYPE_FILE      = 1,
+	OBJECT_TYPE_DIRECTORY = 2,
+	OBJECT_TYPE_IMAGEFILE = 3
+} ObjectType;
 
 typedef struct DiskInfo
 {
@@ -47,19 +51,51 @@ void Directory_Close(Directory *hDirectory);
  * Get the next entry in a directory
  *
  * @param hDirectory pointer to Directory to get entry from
- * @returns String of filename or NULL on EndOfDirectory
+ * @returns Directory entry handle or NULL on EndOfDirectory
  */
-char *Directory_GetNextEntry(Directory *hDirectory, FileInfo *phFileInfo);
+DirEntry *Directory_GetNextEntry(Directory *hDirectory);
 
 /**
- * Directory_GetFullPath
+ * Directory_GetEntryName
  *
- * Get the full path of a file in a directory
+ * Get the name of the specified directory entry.
  *
- * @param hDirectory pointer to Directory to get the base path from
- * @returns String of the full path or NULL on EndOfDirectory
+ * @param hDirEntry Directory entry to get the name of
+ * @returns The entry name or NULL on failure
  */
-char *Directory_GetFullPath(Directory *hDirectory, const char *leaf);
+const char *Directory_GetEntryName(DirEntry *hDirEntry);
+
+/**
+ * Directory_GetEntryType
+ *
+ * Get the type of the specified directory entry.
+ *
+ * @param hDirEntry Directory entry to get the type of
+ * @returns The entry type or OBJECT_TYPE_NOT_FOUND on failure
+ */
+ObjectType Directory_GetEntryType(DirEntry *hDirEntry);
+
+/**
+ * Directory_GetEntrySize
+ *
+ * Get the size of the specified directory entry.
+ *
+ * @param hDirEntry Directory entry to get the size of
+ * @param ulFilesize An integer to be filled with the size
+ * @returns true on success or false on failure
+ */
+bool Directory_GetEntrySize(DirEntry *hDirEntry, Offset *ulFilesize);
+
+/**
+ * Directory_OpenEntryFile
+ *
+ * Open the specified directory entry as a file.
+ *
+ * @param hDirEntry Directory entry to open
+ * @param sMode Mode to open the file with
+ * @returns File handle or NULL on failure
+ */
+FILE *Directory_OpenEntryFile(DirEntry *hDirEntry, const char *sMode);
 
 /**
  * Return disk space information about a file system.
