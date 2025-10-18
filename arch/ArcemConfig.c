@@ -275,6 +275,7 @@ ArcemConfig_Result ArcemConfig_ParseCommandLine(ArcemConfig *pConfig, int argc, 
 {
   unsigned int uValue;
   int iArgument = 0;
+#ifndef SYSTEM_n64
   static const char sVersionString[] =
     "Arcem Version " VER_STRING " (" RELEASE_DATE ")\n";
   static const char sHelpString[] =
@@ -308,7 +309,7 @@ ArcemConfig_Result ArcemConfig_ParseCommandLine(ArcemConfig *pConfig, int argc, 
     "  --menukeys <a> <b> - Specify which key numbers open the tweak menu\n"
 #endif /* SYSTEM_riscos_single */
     ;
-
+#endif
   /* No commandline arguments? */
   if(0 == argc) {
     /* There should always be at least 1, the program name */
@@ -328,6 +329,7 @@ ArcemConfig_Result ArcemConfig_ParseCommandLine(ArcemConfig *pConfig, int argc, 
   iArgument = 1;
 
   while(iArgument < argc) {
+#ifndef SYSTEM_n64
     if(0 == strcmp("--version", argv[iArgument])) {
       printf("%s", sVersionString);
       return Result_Success;
@@ -336,7 +338,9 @@ ArcemConfig_Result ArcemConfig_ParseCommandLine(ArcemConfig *pConfig, int argc, 
       printf("%s", sHelpString);
       return Result_Success;
     }
-    else if(0 == strcmp("--config", argv[iArgument])) {
+    else
+#endif
+    if(0 == strcmp("--config", argv[iArgument])) {
       if(iArgument+1 < argc) { /* Is there a following argument? */
         ini_parse(argv[iArgument + 1], ArcemConfig_Handler, pConfig);
         iArgument += 2;

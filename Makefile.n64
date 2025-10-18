@@ -1,0 +1,32 @@
+all: ArcEm.z64
+.PHONY: all
+
+BUILD_DIR = build-n64
+N64_MKDFS_ROOT = n64/filesystem
+
+include $(N64_INST)/include/n64.mk
+
+N64_CFLAGS+=-DNDEBUG -DSYSTEM_n64 -DHOST_BIGENDIAN -I. -Iarch -In64 -Ilibs/inih -Os -funroll-loops -ffast-math -fomit-frame-pointer
+
+SRCS = armcopro.c armemu.c arminit.c arch/armarc.c \
+        armsupp.c dagstandalone.c eventq.c hostfs.c \
+        n64/DispKbd.c arch/i2c.c arch/archio.c \
+        arch/fdc1772.c n64/ControlPane.c arch/hdc63463.c \
+        arch/keyboard.c n64/filecalls.c \
+        arch/ArcemConfig.c arch/cp15.c arch/newsound.c \
+        arch/displaydev.c arch/filecommon.c arch/extnrom.c \
+        libs/inih/ini.c
+OBJS = $(SRCS:%.c=$(BUILD_DIR)/%.o)
+DEPS = $(SRCS:%.c=$(BUILD_DIR)/%.d)
+
+ArcEm.z64: N64_ROM_TITLE = "ArcEm"
+ArcEm.z64: $(BUILD_DIR)/ArcEm.dfs
+
+$(BUILD_DIR)/ArcEm.dfs: $(wildcard n64/filesystem/*)
+$(BUILD_DIR)/ArcEm.elf: $(OBJS)
+
+clean:
+	rm -rf $(BUILD_DIR) *.z64
+.PHONY: clean
+
+-include $(DEPS)
