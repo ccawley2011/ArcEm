@@ -20,6 +20,8 @@
  */
 FILE *File_OpenAppData(const char *sName, const char *sMode)
 {
+    UNUSED_VAR(sName);
+    UNUSED_VAR(sMode);
     return NULL;
 }
 
