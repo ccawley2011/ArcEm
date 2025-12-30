@@ -15,8 +15,15 @@
 #include <nds.h>
 
 ARMul_State nds_statestr DTCM_BSS;
-void *state_alloc(int s) { return &nds_statestr; }
-void state_free(void *p) {}
+
+void *state_alloc(int s) {
+	UNUSED_VAR(s);
+	return &nds_statestr;
+}
+
+void state_free(void *p) {
+	UNUSED_VAR(p);
+}
 
 static inline s32 calculate_scale(s32 width, s32 height) {
 	const s32 screenAspect = intToFixed(SCREEN_WIDTH, 8) / SCREEN_HEIGHT;
@@ -75,22 +82,29 @@ static void PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,in
 
 static inline void PDD_Name(Host_SetPaletteEntry)(ARMul_State *state,int i,uint_fast16_t phys)
 {
+	UNUSED_VAR(state);
 	BG_PALETTE[i] = ConvertPhysToColour(phys);
 }
 
 static inline void PDD_Name(Host_SetCursorPaletteEntry)(ARMul_State *state,int i,uint_fast16_t phys)
 {
 	// TODO: Implement this!
+	UNUSED_VAR(state);
+	UNUSED_VAR(i);
+	UNUSED_VAR(phys);
 }
 
 static inline void PDD_Name(Host_SetBorderColour)(ARMul_State *state,uint_fast16_t phys)
 {
 	// TODO: Implement this!
+	UNUSED_VAR(state);
+	UNUSED_VAR(phys);
 }
 
 static inline PDD_Row PDD_Name(Host_BeginRow)(ARMul_State *state,int row,int offset,int *alignment)
 {
 	PDD_Row drow;
+	UNUSED_VAR(state);
 	drow.dst = ((uint8_t *)bgGetGfxPtr(background)) + (row * PDD_MonitorWidth) + offset;
 	drow.src = RowBuffer;
 	drow.count = 0;
@@ -100,11 +114,14 @@ static inline PDD_Row PDD_Name(Host_BeginRow)(ARMul_State *state,int row,int off
 
 static inline void PDD_Name(Host_EndRow)(ARMul_State *state,PDD_Row *row)
 {
+	UNUSED_VAR(state);
+	UNUSED_VAR(row);
 	while (dmaBusy(3));
 }
 
 static inline ARMword *PDD_Name(Host_BeginUpdate)(ARMul_State *state,PDD_Row *row,unsigned int count,int *outoffset)
 {
+	UNUSED_VAR(state);
 	row->count = count;
 	*outoffset = 0;
 	return row->src;
@@ -113,6 +130,8 @@ static inline ARMword *PDD_Name(Host_BeginUpdate)(ARMul_State *state,PDD_Row *ro
 static inline void PDD_Name(Host_EndUpdate)(ARMul_State *state,PDD_Row *row)
 {
 	unsigned int count = row->count;
+
+	UNUSED_VAR(state);
 
 	DC_FlushRange(row->src, count>>3);
 	while (dmaBusy(3));
@@ -123,6 +142,7 @@ static inline void PDD_Name(Host_EndUpdate)(ARMul_State *state,PDD_Row *row)
 
 static inline void PDD_Name(Host_TransferUpdate)(ARMul_State *state,PDD_Row *row,unsigned int count,const ARMword *src)
 {
+	UNUSED_VAR(state);
 	DC_FlushRange(src, count>>3);
 	while (dmaBusy(3));
 	dmaCopyWordsAsynch(3, src, row->dst, count>>3);
@@ -130,6 +150,7 @@ static inline void PDD_Name(Host_TransferUpdate)(ARMul_State *state,PDD_Row *row
 
 static inline void PDD_Name(Host_AdvanceRow)(ARMul_State *state,PDD_Row *row,unsigned int count)
 {
+	UNUSED_VAR(state);
 	row->dst += count>>3;
 }
 
@@ -144,6 +165,11 @@ static inline void PDD_Name(Host_PollDisplay)(ARMul_State *state)
 static inline void PDD_Name(Host_DrawBorderRect)(ARMul_State *state,int x,int y,int width,int height)
 {
 	// TODO: Implement this!
+	UNUSED_VAR(state);
+	UNUSED_VAR(x);
+	UNUSED_VAR(y);
+	UNUSED_VAR(width);
+	UNUSED_VAR(height);
 }
 
 #include "../arch/paldisplaydev.c"
@@ -151,6 +177,8 @@ static inline void PDD_Name(Host_DrawBorderRect)(ARMul_State *state,int x,int y,
 static void PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth,int hz)
 {
 	s32 xs, ys;
+
+	UNUSED_VAR(hz);
 
 	if((width > PDD_MonitorWidth) || (height > PDD_MonitorHeight))
 	{
