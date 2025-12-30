@@ -150,6 +150,9 @@ void ControlPane_Error(bool fatal,const char *fmt,...)
 	char msg[256];
 	Window *w;
 	va_list args;
+
+	UNUSED_VAR(fatal);
+
 	va_start(args,fmt);
 
 	ControlPane_Init(NULL);
@@ -392,6 +395,8 @@ static bool ControlPane_ClickWindow(ARMul_State *state, int px, int py)
 	Window *w;
 	size_t i;
 
+	UNUSED_VAR(state);
+
 	for (i = 0; i < sizeof(windows)/sizeof(*windows); i++) {
 		w = &windows[i];
 		/* Is the window open? */
@@ -423,6 +428,8 @@ static bool ControlPane_DragWindow(ARMul_State *state, int px, int py)
 	int xdiff, ydiff;
 	Window *w = &windows[drag_mode - DRAG_WINDOW_1];
 	vu16 *scrollXY = REG_BGOFFSETS_SUB + (w->layer * 2);
+
+	UNUSED_VAR(state);
 
 	xdiff = (px - old_px);
 	ydiff = (py - old_py);
