@@ -413,7 +413,7 @@ uint_fast8_t FDC_Read(ARMul_State *state, uint_fast16_t offset) {
 
   switch (reg) {
     case 0: /* Status */
-      DBG(("FDC_Read: Status reg=0x%x pc=%08x r[15]=%08x\n",FDC.StatusReg,state->pc,state->Reg[15]));
+      DBG(("FDC_Read: Status reg=0x%x pc=%08"PRIx32" r[15]=%08"PRIx32"\n",FDC.StatusReg,state->pc,state->Reg[15]));
       ClearInterrupt(state);
       return(FDC.StatusReg);
       break;
@@ -730,7 +730,7 @@ static void FDC_NewCommand(ARMul_State *state, uint_fast8_t data)
   ClearInterrupt(state);
 
   if (IS_CMD(data, RESTORE)) {
-    DBG(("FDC_NewCommand: Restore data=0x%x pc=%08x r[15]=%08x\n",
+    DBG(("FDC_NewCommand: Restore data=0x%x pc=%08"PRIx32" r[15]=%08"PRIx32"\n",
             data,state->pc,state->Reg[15]));
     FDC.LastCommand=data;
     FDC_RestoreCommand(state);
@@ -770,7 +770,7 @@ static void FDC_NewCommand(ARMul_State *state, uint_fast8_t data)
     FDC.LastCommand=data;
     FDC_WriteCommand(state);
   } else if (IS_CMD(data, READ_ADDR)) {
-    DBG(("FDC_NewCommand: Read address data=0x%x (PC=0x%x)\n",data,ARMul_GetPC(state)));
+    DBG(("FDC_NewCommand: Read address data=0x%x (PC=0x%"PRIx32")\n",data,ARMul_GetPC(state)));
     FDC.LastCommand=data;
     FDC_ReadAddressCommand(state);
   } else if (IS_CMD(data, READ_TRACK)) {
@@ -942,7 +942,7 @@ FDC_InsertFloppy(uint_fast8_t drive, const char *image)
       break;
     }
   }
-  warn_fdc("floppy format %s used for drive %u's r/%c, %d "
+  warn_fdc("floppy format %s used for drive %u's r/%c, %ld "
           "length, image.\n", dr->form->name, drive,
           dr->write_protected ? 'o' : 'w', len);
 

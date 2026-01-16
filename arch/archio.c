@@ -448,7 +448,7 @@ PutVal_IOCReg(ARMul_State *state, uint_fast8_t Register, uint_fast8_t data)
       UpdateTimerRegisters(state);
       ioc.TimerCount[Timer] = ioc.TimerInputLatch[Timer];
       UpdateTimerRegisters(state);
-      dbug_ioc("IOC Write: Timer %d Go! Counter=0x%x\n",
+      dbug_ioc("IOC Write: Timer %d Go! Counter=0x%"PRIx32"\n",
               Timer, ioc.TimerCount[Timer]);
       break;
 
@@ -501,17 +501,17 @@ GetWord_IO(ARMul_State *state, ARMword address)
         return FDC_Read(state, offset);
 
       case 2:
-        dbug_ioc("Read from Econet register (addr=0x%x speed=0x%x offset=0x%x)\n",
+        dbug_ioc("Read from Econet register (addr=0x%"PRIx32" speed=0x%x offset=0x%"PRIxFAST16")\n",
                  address, speed, offset);
         break;
 
       case 3:
-        dbug_ioc("Read from Serial port register (addr=0x%x speed=0x%x offset=0x%x)\n",
+        dbug_ioc("Read from Serial port register (addr=0x%"PRIx32" speed=0x%x offset=0x%"PRIxFAST16")\n",
                  address, speed, offset);
         break;
 
       case 4:
-        dbug_ioc("Read from Internal expansion card (addr=0x%x speed=0x%x offset=0x%x)\n",
+        dbug_ioc("Read from Internal expansion card (addr=0x%"PRIx32" speed=0x%x offset=0x%"PRIxFAST16")\n",
                  address, speed, offset);
         break;
 
@@ -520,25 +520,25 @@ GetWord_IO(ARMul_State *state, ARMword address)
            confusion with IOEB registers */
         if(speed == 1)
         {
-          /*dbug_ioc("HDC read: address=0x%x speed=%d\n",address,speed); */
+          /*dbug_ioc("HDC read: address=0x%"PRIx32" speed=%d\n",address,speed); */
           return HDC_Read(state, offset);
         }
         break;
 
       case 6:
-        dbug_ioc("Read from Bank 6 (addr=0x%x speed=0x%x offset=0x%x)\n",
+        dbug_ioc("Read from Bank 6 (addr=0x%"PRIx32" speed=0x%x offset=0x%"PRIxFAST16")\n",
                  address, speed, offset);
         break;
 
       case 7:
-        dbug_ioc("Read from External expansion card (addr=0x%x speed=0x%x offset=0x%x)\n",
+        dbug_ioc("Read from External expansion card (addr=0x%"PRIx32" speed=0x%x offset=0x%"PRIxFAST16")\n",
                  address, speed, offset);
         break;
     } /* Bank switch */
   } else {
     /* IO-address space unused on Arc hardware */
     /*EnableTrace();*/
-    warn_ioc("Read from non-IOC IO space (addr=0x%08x pc=0x%08x\n",
+    warn_ioc("Read from non-IOC IO space (addr=0x%08"PRIx32" pc=0x%08"PRIx32"\n",
              address, state->pc);
 
     return 0;
@@ -591,18 +591,18 @@ PutValIO(ARMul_State *state, ARMword address, ARMword data, bool byteNotword)
         break;
 
       case 2:
-        dbug_ioc("Write to Econet register (addr=0x%x speed=0x%x offset=0x%x data=0x%x %c\n",
+        dbug_ioc("Write to Econet register (addr=0x%"PRIx32" speed=0x%x offset=0x%"PRIxFAST16" data=0x%"PRIx32" %c\n",
                  address, speed, offset, data,
-                 isprint(data & 0xff) ? data : ' ');
+                 isprint(data & 0xff) ? (char)data : ' ');
         break;
 
       case 3:
-        dbug_ioc("Write to Serial port register (addr=0x%x speed=0x%x offset=0x%x data=0x%x\n",
+        dbug_ioc("Write to Serial port register (addr=0x%"PRIx32" speed=0x%x offset=0x%"PRIxFAST16" data=0x%"PRIx32"\n",
                  address, speed, offset, data);
         break;
 
       case 4:
-        dbug_ioc("Write to Internal expansion card (addr=0x%x speed=0x%x offset=0x%x data=0x%x\n",
+        dbug_ioc("Write to Internal expansion card (addr=0x%"PRIx32" speed=0x%x offset=0x%"PRIxFAST16" data=0x%"PRIx32"\n",
                  address, speed, offset, data);
         break;
 
@@ -611,7 +611,7 @@ PutValIO(ARMul_State *state, ARMword address, ARMword data, bool byteNotword)
         if(speed == 1)
         {
           /* Medium speed, assume HDC */
-          /*dbug_ioc("HDC write: address=0x%x speed=%u\n", address, speed); */
+          /*dbug_ioc("HDC write: address=0x%"PRIx32" speed=%u\n", address, speed); */
           HDC_Write(state, offset, data);
         }
         else if(speed == 2)
@@ -619,12 +619,12 @@ PutValIO(ARMul_State *state, ARMword address, ARMword data, bool byteNotword)
           /* Fast speed */
           switch(offset & ~3) {
             case 0x10:
-              dbug_ioc("Write to Printer data latch offset=0x%x data=0x%x\n",
+              dbug_ioc("Write to Printer data latch offset=0x%"PRIxFAST16" data=0x%"PRIx32"\n",
                        offset, data);
               break;
   
             case 0x18:
-              dbug_ioc("Write to Latch B offset=0x%x data=0x%x\n",
+              dbug_ioc("Write to Latch B offset=0x%"PRIxFAST16" data=0x%"PRIx32"\n",
                        offset, data);
               ioc.LatchB = data & 0xff;
               FDC_LatchBChange(state);
@@ -632,7 +632,7 @@ PutValIO(ARMul_State *state, ARMword address, ARMword data, bool byteNotword)
               break;
   
             case 0x40:
-              dbug_ioc("Write to Latch A offset=0x%x data=0x%x\n",
+              dbug_ioc("Write to Latch A offset=0x%"PRIxFAST16" data=0x%"PRIx32"\n",
                        offset, data);
               ioc.LatchA = data & 0xff;
               FDC_LatchAChange(state);
@@ -640,7 +640,7 @@ PutValIO(ARMul_State *state, ARMword address, ARMword data, bool byteNotword)
               break;
   
             default:
-              dbug_ioc("Writing to non-defined bank 5 address offset=0x%x data=0x%x\n",
+              dbug_ioc("Writing to non-defined bank 5 address offset=0x%"PRIxFAST16" data=0x%"PRIx32"\n",
                        offset, data);
               break;
           }
@@ -648,18 +648,18 @@ PutValIO(ARMul_State *state, ARMword address, ARMword data, bool byteNotword)
         break;
 
       case 6:
-        dbug_ioc("Write to Bank 6 (addr=0x%x speed=0x%x offset=0x%x data=0x%x\n",
+        dbug_ioc("Write to Bank 6 (addr=0x%"PRIx32" speed=0x%x offset=0x%"PRIxFAST16" data=0x%"PRIx32"\n",
                  address, speed, offset, data);
         break;
 
       case 7:
-        dbug_ioc("Write to External expansion card (addr=0x%x speed=0x%x offset=0x%x data=0x%x\n",
+        dbug_ioc("Write to External expansion card (addr=0x%"PRIx32" speed=0x%x offset=0x%"PRIxFAST16" data=0x%"PRIx32"\n",
                  address, speed, offset, data);
         break;
     } /* Bank switch */
   } else {
     /* IO-address space unused on Arc hardware */
-    warn_ioc("Write to non-IOC IO space (addr=0x%x data=0x%08x\n",
+    warn_ioc("Write to non-IOC IO space (addr=0x%"PRIx32" data=0x%08"PRIx32"\n",
              address, data);
   }
 } /* PutValIO */

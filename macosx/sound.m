@@ -252,7 +252,7 @@ void Sound_HostBuffered(SoundData *buffer,int32_t numSamples)
 
   if (underflows)
   {
-    warn_sound("*** sound underflow x%d! ***\n", underflows);
+    warn_sound("*** sound underflow x%"PRId32"! ***\n", underflows);
   }
 
   adjust_fudgerate(used, out);
@@ -352,7 +352,7 @@ Sound_InitHost(ARMul_State *state)
   sound_buffer_in = buffer_threshold;
   local_buffer_out = 0;
 
-  warn_sound("Sound_Open got freq %d samples %d desired level %d (%fs)\n", freq, samples, buffer_threshold, sound_inv_hostrate*0.5f*buffer_threshold);
+  warn_sound("Sound_Open got freq %d samples %d desired level %"PRId32" (%fs)\n", freq, samples, buffer_threshold, sound_inv_hostrate*0.5f*buffer_threshold);
 
   Sound_Resume();
 

@@ -40,8 +40,8 @@ static void ensure_buffer_size(size_t buffer_size_needed)
   if (buffer_size_needed > buffer_size) {
     buffer = realloc(buffer, buffer_size_needed);
     if (!buffer) {
-      warn_data("filecommon could not increase buffer size to %u bytes\n",
-              (ARMword) buffer_size_needed);
+      warn_data("filecommon could not increase buffer size to %"PRIuSIZE" bytes\n",
+              buffer_size_needed);
     }
     buffer_size = buffer_size_needed;
   }

@@ -573,7 +573,7 @@ static void PDD_Name(EventFunc)(ARMul_State *state,CycleCount nowtime)
         return;
       }
       
-      warn_vidc("New mode: %dx%d, %dHz (CR %x ClockIn %dMhz)\n",Width,Height,FrameRate,NewCR,(int)(ClockIn/2000000));
+      warn_vidc("New mode: %dx%d, %dHz (CR %"PRIxFAST16" ClockIn %"PRId32"Mhz)\n",Width,Height,FrameRate,NewCR,ClockIn/2000000);
       DC.LastHostWidth = Width;
       DC.LastHostHeight = Height;
       DC.LastHostHz = FrameRate;
@@ -847,7 +847,7 @@ static void PDD_Name(VIDCPutVal)(ARMul_State *state,ARMword address, ARMword dat
   addr&=~3;
   switch (addr) {
     case 0x40: /* Border col */
-      dbug_vidc("VIDC border colour write val=0x%x\n",val);
+      dbug_vidc("VIDC border colour write val=0x%"PRIx32"\n",val);
       val &= 0x1fff;
       if(VIDC.BorderCol != val)
       {
@@ -860,7 +860,7 @@ static void PDD_Name(VIDCPutVal)(ARMul_State *state,ARMword address, ARMword dat
     case 0x48: /* Cursor palette log col 2 */
     case 0x4c: /* Cursor palette log col 3 */
       addr = (addr-0x44)>>2;
-      dbug_vidc("VIDC cursor log col %d write val=0x%x\n",addr+1,val);
+      dbug_vidc("VIDC cursor log col %"PRId32" write val=0x%"PRIx32"\n",addr+1,val);
       val &= 0x1fff;
       if(VIDC.CursorPalette[addr] != val)
       {
@@ -877,7 +877,7 @@ static void PDD_Name(VIDCPutVal)(ARMul_State *state,ARMword address, ARMword dat
     case 0x74: /* Stereo image reg 4 */
     case 0x78: /* Stereo image reg 5 */
     case 0x7c: /* Stereo image reg 6 */
-      dbug_vidc("VIDC stereo image reg write val=0x%x\n",val);
+      dbug_vidc("VIDC stereo image reg write val=0x%"PRIx32"\n",val);
       val &= 7;
       addr = ((addr-0x64)>>2)&0x7;
       if(VIDC.StereoImageReg[addr] != val)
@@ -890,87 +890,87 @@ static void PDD_Name(VIDCPutVal)(ARMul_State *state,ARMword address, ARMword dat
       break;
 
     case 0x80:
-      dbug_vidc("VIDC Horiz cycle register val=%d\n",val>>14);
+      dbug_vidc("VIDC Horiz cycle register val=%"PRId32"\n",val>>14);
       VideoRelUpdateAndForce(DC.ModeChanged,VIDC.Horiz_Cycle,(val>>14) & 0x3ff);
       break;
 
     case 0x84:
-      dbug_vidc("VIDC Horiz sync width register val=%d\n",val>>14);
+      dbug_vidc("VIDC Horiz sync width register val=%"PRId32"\n",val>>14);
       VIDC.Horiz_SyncWidth = (val>>14) & 0x3ff;
       break;
 
     case 0x88:
-      dbug_vidc("VIDC Horiz border start register val=%d\n",val>>14);
+      dbug_vidc("VIDC Horiz border start register val=%"PRId32"\n",val>>14);
       VIDC.Horiz_BorderStart = (val>>14) & 0x3ff;
       break;
 
     case 0x8c:
-      dbug_vidc("VIDC Horiz display start register val=%d\n",val>>14);
+      dbug_vidc("VIDC Horiz display start register val=%"PRId32"\n",val>>14);
       VideoRelUpdateAndForce(DC.ModeChanged,VIDC.Horiz_DisplayStart,(val>>14) & 0x3ff);
       break;
 
     case 0x90:
-      dbug_vidc("VIDC Horiz display end register val=%d\n",val>>14);
+      dbug_vidc("VIDC Horiz display end register val=%"PRId32"\n",val>>14);
       VideoRelUpdateAndForce(DC.ModeChanged,VIDC.Horiz_DisplayEnd,(val>>14) & 0x3ff);
       break;
 
     case 0x94:
-      dbug_vidc("VIDC Horiz border end register val=%d\n",val>>14);
+      dbug_vidc("VIDC Horiz border end register val=%"PRId32"\n",val>>14);
       VIDC.Horiz_BorderEnd = (val>>14) & 0x3ff;
       break;
 
     case 0x98:
-      dbug_vidc("VIDC Horiz cursor start register val=%d\n",val>>13);
+      dbug_vidc("VIDC Horiz cursor start register val=%"PRId32"\n",val>>13);
       VIDC.Horiz_CursorStart=(val>>13) & 0x7ff;
       break;
 
     case 0x9c:
-      dbug_vidc("VIDC Horiz interlace register val=%d\n",val>>14);
+      dbug_vidc("VIDC Horiz interlace register val=%"PRId32"\n",val>>14);
       VIDC.Horiz_Interlace = (val>>14) & 0x3ff;
       break;
 
     case 0xa0:
-      dbug_vidc("VIDC Vert cycle register val=%d\n",val>>14);
+      dbug_vidc("VIDC Vert cycle register val=%"PRId32"\n",val>>14);
       VideoRelUpdateAndForce(DC.ModeChanged,VIDC.Vert_Cycle,(val>>14) & 0x3ff);
       break;
 
     case 0xa4:
-      dbug_vidc("VIDC Vert sync width register val=%d\n",val>>14);
+      dbug_vidc("VIDC Vert sync width register val=%"PRId32"\n",val>>14);
       VIDC.Vert_SyncWidth = (val>>14) & 0x3ff;
       break;
 
     case 0xa8:
-      dbug_vidc("VIDC Vert border start register val=%d\n",val>>14);
+      dbug_vidc("VIDC Vert border start register val=%"PRId32"\n",val>>14);
       VideoRelUpdateAndForce(DC.ModeChanged,VIDC.Vert_BorderStart,((val>>14) & 0x3ff));
       break;
 
     case 0xac:
-      dbug_vidc("VIDC Vert display start register val=%d\n",val>>14);
+      dbug_vidc("VIDC Vert display start register val=%"PRId32"\n",val>>14);
       VideoRelUpdateAndForce(DC.ModeChanged,VIDC.Vert_DisplayStart,((val>>14) & 0x3ff));
       break;
 
     case 0xb0:
-      dbug_vidc("VIDC Vert display end register val=%d\n",val>>14);
+      dbug_vidc("VIDC Vert display end register val=%"PRId32"\n",val>>14);
       VideoRelUpdateAndForce(DC.ModeChanged,VIDC.Vert_DisplayEnd,(val>>14) & 0x3ff);
       break;
 
     case 0xb4:
-      dbug_vidc("VIDC Vert border end register val=%d\n",val>>14);
+      dbug_vidc("VIDC Vert border end register val=%"PRId32"\n",val>>14);
       VideoRelUpdateAndForce(DC.ModeChanged,VIDC.Vert_BorderEnd,((val>>14) & 0x3ff));
       break;
 
     case 0xb8:
-      dbug_vidc("VIDC Vert cursor start register val=%d\n",val>>14);
+      dbug_vidc("VIDC Vert cursor start register val=%"PRId32"\n",val>>14);
       VIDC.Vert_CursorStart=(val>>14) & 0x3ff;
       break;
 
     case 0xbc:
-      dbug_vidc("VIDC Vert cursor end register val=%d\n",val>>14);
+      dbug_vidc("VIDC Vert cursor end register val=%"PRId32"\n",val>>14);
       VIDC.Vert_CursorEnd=(val>>14) & 0x3ff;
       break;
 
     case 0xc0:
-      dbug_vidc("VIDC sound freq register val=%d\n",val);
+      dbug_vidc("VIDC sound freq register val=%"PRId32"\n",val);
       val &= 0xff;
       if(VIDC.SoundFreq != val)
       {
@@ -982,12 +982,12 @@ static void PDD_Name(VIDCPutVal)(ARMul_State *state,ARMword address, ARMword dat
       break;
 
     case 0xe0:
-      dbug_vidc("VIDC control register val=0x%x\n",val);
+      dbug_vidc("VIDC control register val=0x%"PRIx32"\n",val);
       VIDC.ControlReg = val & 0xffff;
       break;
 
     default:
-      warn_vidc("Write to unknown VIDC register reg=0x%x val=0x%x\n",addr,val);
+      warn_vidc("Write to unknown VIDC register reg=0x%"PRIx32" val=0x%"PRIx32"\n",addr,val);
       break;
 
   }; /* Register switch */

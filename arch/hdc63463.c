@@ -279,7 +279,7 @@ static void Clear_IntFlags(ARMul_State *state) {
 
 /*---------------------------------------------------------------------------*/
 static void HDC_DMAWrite(ARMul_State *state, uint_fast16_t offset, uint_fast16_t data) {
-  dbug_dmawrite("HDC DMA Write offset=0x%x data=0x%x r15=0x%x\n",offset,data,PCVAL);
+  dbug_dmawrite("HDC DMA Write offset=0x%"PRIxFAST16" data=0x%"PRIxFAST16" r15=0x%"PRIx32"\n",offset,data,PCVAL);
 
   if (HDC.CurrentlyOpenDataBuffer==0xff) {
     dbug_dmawrite("HDC_DMAWrite: DTR - to non-open data buffer\n");
@@ -303,7 +303,7 @@ static void HDC_DMAWrite(ARMul_State *state, uint_fast16_t offset, uint_fast16_t
 
     HDC.DBufPtrs[db]=off;
 
-    dbug_dmawrite("HDC_DMAWrite: DTR to data buffer %d - got 0x%x\n",db,data);
+    dbug_dmawrite("HDC_DMAWrite: DTR to data buffer %d - got 0x%"PRIxFAST16"\n",db,data);
 
     if (off>254) {
       /* Just finished off a block - lets fire the next one off - but lets drop
@@ -320,7 +320,7 @@ static void HDC_DMAWrite(ARMul_State *state, uint_fast16_t offset, uint_fast16_t
 static uint_fast16_t HDC_DMARead(ARMul_State *state, uint_fast16_t offset) {
   uint_fast16_t tmpres;
 
-  dbug_dmaread("HDC DMA Read offset=0x%x PCVAL=0x%x\n",offset,PCVAL);
+  dbug_dmaread("HDC DMA Read offset=0x%"PRIxFAST16" PCVAL=0x%"PRIx32"\n",offset,PCVAL);
 
   if (HDC.CurrentlyOpenDataBuffer==0xff) {
     dbug("HDC_DMARead: DTR - from non-open data buffer\n");
@@ -342,7 +342,7 @@ static uint_fast16_t HDC_DMARead(ARMul_State *state, uint_fast16_t offset) {
 
     HDC.DBufPtrs[db]=off;
 
-    dbug_dmaread("HDC_DMARead: DTR - from data buffer %d - returning 0x%x\n",db,tmpres);
+    dbug_dmaread("HDC_DMARead: DTR - from data buffer %d - returning 0x%"PRIxFAST16"\n",db,tmpres);
 
     if (off>254) {
       /* Ooh - just finished reading a block - lets fire the next one off
@@ -420,6 +420,7 @@ static bool GetParams(ARMul_State *state, const int NParams, ...) {
     *resptr=HDC.ParamBlock[param];
   }
 
+  va_end(args);
   return(true);
 } /* GetParams */
 
@@ -443,10 +444,10 @@ static bool SetFilePtr(ARMul_State *state, uint_fast8_t drive, uint_fast8_t head
     struct HDCshape *disc;
     uint32_t ptr;
 
-    dbug("SetFilePtr: drive=%u head=%u cyl=%u sec=%u\n", drive, head, cyl, sect);
+    dbug("SetFilePtr: drive=%u head=%u cyl=%"PRIuFAST16" sec=%u\n", drive, head, cyl, sect);
 
     if (drive > DIM(CONFIG.aST506DiskShapes)) {
-        ControlPane_Error(true,"SetFilePtr: drive %d out of range 0..%u",
+        ControlPane_Error(true,"SetFilePtr: drive %d out of range 0..%"PRIuSIZE,
             drive, DIM(CONFIG.aST506DiskShapes));
     }
 
@@ -455,7 +456,7 @@ static bool SetFilePtr(ARMul_State *state, uint_fast8_t drive, uint_fast8_t head
         disc->NHeads, disc->NSectors, disc->RecordLength);
 
     if (cyl >= disc->NCyls) {
-        dbug("cyl too large: %u >= %u\n", cyl, disc->NCyls);
+        dbug("cyl too large: %"PRIuFAST16" >= %u\n", cyl, disc->NCyls);
         Cause_Error(state, ERR_NSC);
         return false;
     }
@@ -477,7 +478,7 @@ static bool SetFilePtr(ARMul_State *state, uint_fast8_t drive, uint_fast8_t head
 
     ptr = (((cyl * disc->NHeads) + head) * disc->NSectors + sect) *
         disc->RecordLength;
-    dbug("SetFilePtr: ptr=%lu\n", ptr);
+    dbug("SetFilePtr: ptr=%"PRIu32"\n", ptr);
 
     if (!HDC.HardFile[drive]) {
         dbug("SetFilePtr:no image for drive %d\n", drive);
@@ -700,7 +701,7 @@ static void SeekCommand(ARMul_State *state) {
   if (DesiredCylinder>HDC.specshape.NCyls) {
     /* Ook - bad cylinder address */
         warn_hdc("seek: cylinder address greater than "
-            "specified, %u > %u\n", DesiredCylinder,
+            "specified, %"PRIuFAST16" > %u\n", DesiredCylinder,
             HDC.specshape.NCyls);
     Cause_Error(state,ERR_INC); /* Invalid NCA */
     ReturnParams(state,4,0,HDC.SSB,US,0);
@@ -710,7 +711,7 @@ static void SeekCommand(ARMul_State *state) {
   if (DesiredCylinder >= CONFIG.aST506DiskShapes[US].NCyls) {
     /* Ook - bad cylinder address */
         warn_hdc("seek: cylinder address greater than "
-            "or equal to configured, %u >= %u\n", DesiredCylinder,
+            "or equal to configured, %"PRIuFAST16" >= %u\n", DesiredCylinder,
             CONFIG.aST506DiskShapes[US].NCyls);
     Cause_Error(state,ERR_NSC); /* Seek screwed up */
     ReturnParams(state,4,0,HDC.SSB,US,0);
@@ -720,7 +721,7 @@ static void SeekCommand(ARMul_State *state) {
   /* OK - move the head - very quickly at the moment :-) */
   HDC.Track[US]=DesiredCylinder;
 
-  dbug("HDC:SeekCommand to cylinder %d on drive %d\n",DesiredCylinder,US);
+  dbug("HDC:SeekCommand to cylinder %"PRIuFAST16" on drive %d\n",DesiredCylinder,US);
 
   /* OK - return all fine */
   ReturnParams(state,4,0,HDC.SSB,US,HDC.CUL);
@@ -1141,7 +1142,7 @@ static void CheckData_DoNextBufferFull(ARMul_State *state) {
     /* Fill here up! */
     if (retval=fread(tmpbuff,1,256,HDC.HardFile[HDC.CommandData.ReadData.US]),retval!=256)
     {
-      warn_hdc("HDC: CheckData_DoNextBufferFull - returning data err - retval=0x%x\n",retval);
+      warn_hdc("HDC: CheckData_DoNextBufferFull - returning data err - retval=0x%"PRIxSIZE"\n",retval);
       /* End of command */
       Cause_CED(state);
       HDC.DelayLatch=1024;
@@ -1432,7 +1433,7 @@ static void HDC_StartNewCommand(ARMul_State *state, uint_fast16_t data) {
       warn_hdc("--------------\n");
       HDC.StatusReg&=~BIT_COMPARAMREJECT;
       PrintParams(state);
-      ControlPane_Error(true,"HDC New command: Data=0x%x - unknown/unimplemented PC=0x%"PRIx32,data,PCVAL);
+      ControlPane_Error(true,"HDC New command: Data=0x%"PRIxFAST16" - unknown/unimplemented PC=0x%"PRIx32,data,PCVAL);
       break;
   } /* Command switch */
 } /* HDC_StartNewCommand */
@@ -1442,7 +1443,7 @@ void HDC_Write(ARMul_State *state, uint_fast16_t offset, uint_fast16_t data) {
   bool rs=offset & 4;
   bool rNw=offset & 32;
 
-  dbug("HDC_Write: offset=0x%x data=0x%x\n",offset,data);
+  dbug("HDC_Write: offset=0x%"PRIxFAST16" data=0x%"PRIxFAST16"\n",offset,data);
   if (offset & 0x8) {
     HDC_DMAWrite(state,offset,data);
   } else {
@@ -1467,7 +1468,7 @@ void HDC_Write(ARMul_State *state, uint_fast16_t offset, uint_fast16_t data) {
         } /* Not rejecting parameters */
         return;
       } else {
-        dbug("HDC Write offset=0x%x data=0x%x\n",offset,data);
+        dbug("HDC Write offset=0x%"PRIxFAST16" data=0x%"PRIxFAST16"\n",offset,data);
 
         if (HDC.CurrentlyOpenDataBuffer==0xff) {
           warn_hdc("HDC_Write: DTR - to non-open data buffer\n");
@@ -1491,7 +1492,7 @@ void HDC_Write(ARMul_State *state, uint_fast16_t offset, uint_fast16_t data) {
 
           HDC.DBufPtrs[db]=off;
 
-          dbug("HDC_Write: DTR to data buffer %d - got 0x%x\n",db,data);
+          dbug("HDC_Write: DTR to data buffer %d - got 0x%"PRIxFAST16"\n",db,data);
 
           if (off>254) {
             /* Just finished off a block - lets fire the next one off - but lets drop
@@ -1504,7 +1505,7 @@ void HDC_Write(ARMul_State *state, uint_fast16_t offset, uint_fast16_t data) {
         } /* buffer not full at first */
       } /* write data */
     } else {
-      dbug("HDC_Write: Command reg = 0x%x pc=0x%"PRIx32"\n",data,PCVAL);
+      dbug("HDC_Write: Command reg = 0x%"PRIxFAST16" pc=0x%"PRIx32"\n",data,PCVAL);
       if (!(HDC.StatusReg & BIT_BUSY)) {
         HDC_StartNewCommand(state,data);
       }
@@ -1520,7 +1521,7 @@ uint_fast16_t HDC_Read(ARMul_State *state, uint_fast16_t offset) {
   bool rs=offset & 4;
   bool rNw=offset & 32;
 
-  dbug("HDC_Read: offset=0x%x\n",offset);
+  dbug("HDC_Read: offset=0x%"PRIxFAST16"\n",offset);
 
   if (offset & 0x8) {
     return(HDC_DMARead(state,offset));

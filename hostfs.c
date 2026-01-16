@@ -283,8 +283,8 @@ hostfs_ensure_buffer_size(size_t buffer_size_needed)
   if (buffer_size_needed > buffer_size) {
     buffer = realloc(buffer, buffer_size_needed);
     if (!buffer) {
-      hostfs_error(true,"HostFS could not increase buffer size to %lu bytes",
-              (unsigned long) buffer_size_needed);
+      hostfs_error(true,"HostFS could not increase buffer size to %"PRIuSIZE" bytes",
+              buffer_size_needed);
     }
     buffer_size = buffer_size_needed;
   }
@@ -1030,9 +1030,9 @@ hostfs_open(ARMul_State *state)
   assert(state);
 
   dbug_hostfs("Open\n");
-  dbug_hostfs("\tr1 = 0x%08x (ptr to pathname)\n", state->Reg[1]);
-  dbug_hostfs("\tr3 = %u (FileSwitch handle)\n", state->Reg[3]);
-  dbug_hostfs("\tr6 = 0x%08x (pointer to special field if present)\n",
+  dbug_hostfs("\tr1 = 0x%08"PRIx32" (ptr to pathname)\n", state->Reg[1]);
+  dbug_hostfs("\tr3 = %"PRIu32" (FileSwitch handle)\n", state->Reg[3]);
+  dbug_hostfs("\tr6 = 0x%08"PRIx32" (pointer to special field if present)\n",
           state->Reg[6]);
 
   get_string(state, state->Reg[1], ro_path, sizeof(ro_path));
@@ -1088,7 +1088,7 @@ hostfs_open(ARMul_State *state)
   state->Reg[3] = (ARMword) ftello64(open_file[idx]);
   rewind(open_file[idx]); /* Return to start */
 
-  dbug_hostfs("\tFile opened OK, handle %u, size %u\n",idx,state->Reg[3]);
+  dbug_hostfs("\tFile opened OK, handle %u, size %"PRIu32"\n",idx,state->Reg[3]);
 
   state->Reg[1] = idx; /* Our filing system's handle */
   state->Reg[2] = 1024; /* Buffer size to use in range 64-1024.
@@ -1105,10 +1105,10 @@ hostfs_getbytes(ARMul_State *state)
   assert(state);
 
   dbug_hostfs("GetBytes\n");
-  dbug_hostfs("\tr1 = %u (our file handle)\n", state->Reg[1]);
-  dbug_hostfs("\tr2 = 0x%08x (ptr to buffer)\n", state->Reg[2]);
-  dbug_hostfs("\tr3 = %u (number of bytes to read)\n", state->Reg[3]);
-  dbug_hostfs("\tr4 = %u (file offset from which to get data)\n",
+  dbug_hostfs("\tr1 = %"PRIu32" (our file handle)\n", state->Reg[1]);
+  dbug_hostfs("\tr2 = 0x%08"PRIx32" (ptr to buffer)\n", state->Reg[2]);
+  dbug_hostfs("\tr3 = %"PRIu32" (number of bytes to read)\n", state->Reg[3]);
+  dbug_hostfs("\tr4 = %"PRIu32" (file offset from which to get data)\n",
               state->Reg[4]);
 
   fseeko64(f, (off64_t) state->Reg[4], SEEK_SET);
@@ -1125,10 +1125,10 @@ hostfs_putbytes(ARMul_State *state)
   assert(state);
 
   dbug_hostfs("PutBytes\n");
-  dbug_hostfs("\tr1 = %u (our file handle)\n", state->Reg[1]);
-  dbug_hostfs("\tr2 = 0x%08x (ptr to buffer)\n", state->Reg[2]);
-  dbug_hostfs("\tr3 = %u (number of bytes to write)\n", state->Reg[3]);
-  dbug_hostfs("\tr4 = %u (file offset at which to put data)\n",
+  dbug_hostfs("\tr1 = %"PRIu32" (our file handle)\n", state->Reg[1]);
+  dbug_hostfs("\tr2 = 0x%08"PRIx32" (ptr to buffer)\n", state->Reg[2]);
+  dbug_hostfs("\tr3 = %"PRIu32" (number of bytes to write)\n", state->Reg[3]);
+  dbug_hostfs("\tr4 = %"PRIu32" (file offset at which to put data)\n",
               state->Reg[4]);
 
   fseeko64(f, (off64_t) state->Reg[4], SEEK_SET);
@@ -1147,8 +1147,8 @@ hostfs_args_3_write_file_extent(ARMul_State *state)
   f = open_file[state->Reg[1]];
 
   dbug_hostfs("\tWrite file extent\n");
-  dbug_hostfs("\tr1 = %u (our file handle)\n", state->Reg[1]);
-  dbug_hostfs("\tr2 = %u (new extent)\n", state->Reg[2]);
+  dbug_hostfs("\tr1 = %"PRIu32" (our file handle)\n", state->Reg[1]);
+  dbug_hostfs("\tr2 = %"PRIu32" (new extent)\n", state->Reg[2]);
 
   /* Flush any pending I/O before moving to low-level I/O functions */
   if (fflush(f)) {
@@ -1186,8 +1186,8 @@ hostfs_args_7_ensure_file_size(ARMul_State *state)
   f = open_file[state->Reg[1]];
 
   dbug_hostfs("\tEnsure file size\n");
-  dbug_hostfs("\tr1 = %u (our file handle)\n", state->Reg[1]);
-  dbug_hostfs("\tr2 = %u (size of file to ensure)\n", state->Reg[2]);
+  dbug_hostfs("\tr1 = %"PRIu32" (our file handle)\n", state->Reg[1]);
+  dbug_hostfs("\tr2 = %"PRIu32" (size of file to ensure)\n", state->Reg[2]);
 
   fseeko64(f, 0, SEEK_END);
 
@@ -1206,9 +1206,9 @@ hostfs_args_8_write_zeros(ARMul_State *state)
   f = open_file[state->Reg[1]];
 
   dbug_hostfs("\tWrite zeros to file\n");
-  dbug_hostfs("\tr1 = %u (our file handle)\n", state->Reg[1]);
-  dbug_hostfs("\tr2 = %u (file offset at which to write)\n", state->Reg[2]);
-  dbug_hostfs("\tr3 = %u (number of zero bytes to write)\n", state->Reg[3]);
+  dbug_hostfs("\tr1 = %"PRIu32" (our file handle)\n", state->Reg[1]);
+  dbug_hostfs("\tr2 = %"PRIu32" (file offset at which to write)\n", state->Reg[2]);
+  dbug_hostfs("\tr3 = %"PRIu32" (number of zero bytes to write)\n", state->Reg[3]);
 
   fseeko64(f, (off64_t) state->Reg[2], SEEK_SET);
 
@@ -1242,7 +1242,7 @@ hostfs_args(ARMul_State *state)
 {
   assert(state);
 
-  dbug_hostfs("Args %u\n", state->Reg[0]);
+  dbug_hostfs("Args %"PRIu32"\n", state->Reg[0]);
   switch (state->Reg[0]) {
   case 3:
     hostfs_args_3_write_file_extent(state);
@@ -1272,9 +1272,9 @@ hostfs_close(ARMul_State *state)
   exec = state->Reg[3];
 
   dbug_hostfs("Close\n");
-  dbug_hostfs("\tr1 = %u (our file handle)\n", state->Reg[1]);
-  dbug_hostfs("\tr2 = 0x%08x (new load address)\n", state->Reg[2]);
-  dbug_hostfs("\tr3 = 0x%08x (new exec address)\n", state->Reg[3]);
+  dbug_hostfs("\tr1 = %"PRIu32" (our file handle)\n", state->Reg[1]);
+  dbug_hostfs("\tr2 = 0x%08"PRIx32" (new load address)\n", state->Reg[2]);
+  dbug_hostfs("\tr3 = 0x%08"PRIx32" (new exec address)\n", state->Reg[3]);
 
   /* Close the file */
   fclose(f);
@@ -1311,12 +1311,12 @@ hostfs_write_file(ARMul_State *state, bool with_data)
 
   assert(state);
 
-  dbug_hostfs("\tr1 = 0x%08x (ptr to filename)\n", state->Reg[1]);
-  dbug_hostfs("\tr2 = 0x%08x (load address)\n", state->Reg[2]);
-  dbug_hostfs("\tr3 = 0x%08x (exec address)\n", state->Reg[3]);
-  dbug_hostfs("\tr4 = 0x%08x (ptr to buffer start)\n", state->Reg[4]);
-  dbug_hostfs("\tr5 = 0x%08x (ptr to buffer end)\n", state->Reg[5]);
-  dbug_hostfs("\tr6 = 0x%08x (pointer to special field if present)\n",
+  dbug_hostfs("\tr1 = 0x%08"PRIx32" (ptr to filename)\n", state->Reg[1]);
+  dbug_hostfs("\tr2 = 0x%08"PRIx32" (load address)\n", state->Reg[2]);
+  dbug_hostfs("\tr3 = 0x%08"PRIx32" (exec address)\n", state->Reg[3]);
+  dbug_hostfs("\tr4 = 0x%08"PRIx32" (ptr to buffer start)\n", state->Reg[4]);
+  dbug_hostfs("\tr5 = 0x%08"PRIx32" (ptr to buffer end)\n", state->Reg[5]);
+  dbug_hostfs("\tr6 = 0x%08"PRIx32" (pointer to special field if present)\n",
               state->Reg[6]);
 
   length = state->Reg[5] - state->Reg[4];
@@ -1415,12 +1415,12 @@ hostfs_file_1_write_cat_info(ARMul_State *state)
   assert(state);
 
   dbug_hostfs("\tWrite catalogue information\n");
-  dbug_hostfs("\tr1 = 0x%08x (ptr to wildcarded filename)\n",
+  dbug_hostfs("\tr1 = 0x%08"PRIx32" (ptr to wildcarded filename)\n",
               state->Reg[1]);
-  dbug_hostfs("\tr2 = 0x%08x (new load address)\n", state->Reg[2]);
-  dbug_hostfs("\tr3 = 0x%08x (new exec address)\n", state->Reg[3]);
-  dbug_hostfs("\tr5 = 0x%08x (new attribs)\n", state->Reg[5]);
-  dbug_hostfs("\tr6 = 0x%08x (pointer to special field if present)\n",
+  dbug_hostfs("\tr2 = 0x%08"PRIx32" (new load address)\n", state->Reg[2]);
+  dbug_hostfs("\tr3 = 0x%08"PRIx32" (new exec address)\n", state->Reg[3]);
+  dbug_hostfs("\tr5 = 0x%08"PRIx32" (new attribs)\n", state->Reg[5]);
+  dbug_hostfs("\tr6 = 0x%08"PRIx32" (pointer to special field if present)\n",
               state->Reg[6]);
 
   get_string(state, state->Reg[1], ro_path, sizeof(ro_path));
@@ -1460,8 +1460,8 @@ hostfs_file_5_read_cat_info(ARMul_State *state)
   assert(state);
 
   dbug_hostfs("\tRead catalogue information\n");
-  dbug_hostfs("\tr1 = 0x%08x (ptr to pathname)\n", state->Reg[1]);
-  dbug_hostfs("\tr6 = 0x%08x (pointer to special field if present)\n",
+  dbug_hostfs("\tr1 = 0x%08"PRIx32" (ptr to pathname)\n", state->Reg[1]);
+  dbug_hostfs("\tr6 = 0x%08"PRIx32" (pointer to special field if present)\n",
               state->Reg[6]);
 
   get_string(state, state->Reg[1], ro_path, sizeof(ro_path));
@@ -1488,8 +1488,8 @@ hostfs_file_6_delete(ARMul_State *state)
   assert(state);
 
   dbug_hostfs("\tDelete object\n");
-  dbug_hostfs("\tr1 = 0x%08x (ptr to pathname)\n", state->Reg[1]);
-  dbug_hostfs("\tr6 = 0x%08x (pointer to special field if present)\n",
+  dbug_hostfs("\tr1 = 0x%08"PRIx32" (ptr to pathname)\n", state->Reg[1]);
+  dbug_hostfs("\tr6 = 0x%08"PRIx32" (pointer to special field if present)\n",
               state->Reg[6]);
 
   get_string(state, state->Reg[1], ro_path, sizeof(ro_path));
@@ -1552,11 +1552,11 @@ hostfs_file_8_create_dir(ARMul_State *state)
   assert(state);
 
   dbug_hostfs("\tCreate directory\n");
-  dbug_hostfs("\tr1 = 0x%08x (ptr to dirname)\n", state->Reg[1]);
-  dbug_hostfs("\tr2 = 0x%08x (load address)\n", state->Reg[2]);
-  dbug_hostfs("\tr3 = 0x%08x (exec address)\n", state->Reg[3]);
-  dbug_hostfs("\tr4 = %u (number of entries)\n", state->Reg[4]);
-  dbug_hostfs("\tr6 = 0x%08x (pointer to special field if present)\n",
+  dbug_hostfs("\tr1 = 0x%08"PRIx32" (ptr to dirname)\n", state->Reg[1]);
+  dbug_hostfs("\tr2 = 0x%08"PRIx32" (load address)\n", state->Reg[2]);
+  dbug_hostfs("\tr3 = 0x%08"PRIx32" (exec address)\n", state->Reg[3]);
+  dbug_hostfs("\tr4 = %"PRIu32" (number of entries)\n", state->Reg[4]);
+  dbug_hostfs("\tr6 = 0x%08"PRIx32" (pointer to special field if present)\n",
               state->Reg[6]);
 
   get_string(state, state->Reg[1], ro_path, sizeof(ro_path));
@@ -1622,9 +1622,9 @@ hostfs_file_255_load_file(ARMul_State *state)
   ptr = state->Reg[2];
 
   dbug_hostfs("\tLoad file\n");
-  dbug_hostfs("\tr1 = 0x%08x (ptr to wildcarded filename)\n", state->Reg[1]);
-  dbug_hostfs("\tr2 = 0x%08x (address to load at)\n", state->Reg[2]);
-  dbug_hostfs("\tr6 = 0x%08x (pointer to special field if present)\n",
+  dbug_hostfs("\tr1 = 0x%08"PRIx32" (ptr to wildcarded filename)\n", state->Reg[1]);
+  dbug_hostfs("\tr2 = 0x%08"PRIx32" (address to load at)\n", state->Reg[2]);
+  dbug_hostfs("\tr6 = 0x%08"PRIx32" (pointer to special field if present)\n",
               state->Reg[6]);
 
   get_string(state, state->Reg[1], ro_path, sizeof(ro_path));
@@ -1660,7 +1660,7 @@ hostfs_file(ARMul_State *state)
 {
   assert(state);
 
-  dbug_hostfs("File %u\n", state->Reg[0]);
+  dbug_hostfs("File %"PRIu32"\n", state->Reg[0]);
   switch (state->Reg[0]) {
   case 0:
     hostfs_file_0_save_file(state);
@@ -1695,7 +1695,7 @@ hostfs_func_0_chdir(ARMul_State *state)
   assert(state);
 
   dbug_hostfs("\tSet current directory\n");
-  dbug_hostfs("\tr1 = 0x%08x (ptr to wildcarded dir. name)\n", state->Reg[1]);
+  dbug_hostfs("\tr1 = 0x%08"PRIx32" (ptr to wildcarded dir. name)\n", state->Reg[1]);
 
   get_string(state, state->Reg[1], ro_path, sizeof(ro_path));
   riscos_path_to_host(state, ro_path, host_path);
@@ -1715,11 +1715,11 @@ hostfs_func_8_rename(ARMul_State *state)
   assert(state);
 
   dbug_hostfs("\tRename object\n");
-  dbug_hostfs("\tr1 = 0x%08x (ptr to old name)\n", state->Reg[1]);
-  dbug_hostfs("\tr2 = 0x%08x (ptr to new name)\n", state->Reg[2]);
-  dbug_hostfs("\tr6 = 0x%08x (pointer to 1st special field if present)\n",
+  dbug_hostfs("\tr1 = 0x%08"PRIx32" (ptr to old name)\n", state->Reg[1]);
+  dbug_hostfs("\tr2 = 0x%08"PRIx32" (ptr to new name)\n", state->Reg[2]);
+  dbug_hostfs("\tr6 = 0x%08"PRIx32" (pointer to 1st special field if present)\n",
               state->Reg[6]);
-  dbug_hostfs("\tr7 = 0x%08x (pointer to 2nd special field if present)\n",
+  dbug_hostfs("\tr7 = 0x%08"PRIx32" (pointer to 2nd special field if present)\n",
               state->Reg[7]);
 
   /* TODO When we support multiple virtual disks, check that rename would be
@@ -1994,14 +1994,14 @@ hostfs_read_dir(ARMul_State *state, bool with_info, bool with_timestamp)
 
   assert(state);
 
-  dbug_hostfs("\tr1 = 0x%08x (ptr to wildcarded dir. name)\n", state->Reg[1]);
-  dbug_hostfs("\tr2 = 0x%08x (ptr to buffer for returned data)\n",
+  dbug_hostfs("\tr1 = 0x%08"PRIx32" (ptr to wildcarded dir. name)\n", state->Reg[1]);
+  dbug_hostfs("\tr2 = 0x%08"PRIx32" (ptr to buffer for returned data)\n",
               state->Reg[2]);
-  dbug_hostfs("\tr3 = %u (number of object names to read)\n", state->Reg[3]);
-  dbug_hostfs("\tr4 = %u (offset of first item to read in dir)\n",
+  dbug_hostfs("\tr3 = %"PRIu32" (number of object names to read)\n", state->Reg[3]);
+  dbug_hostfs("\tr4 = %"PRIu32" (offset of first item to read in dir)\n",
               state->Reg[4]);
-  dbug_hostfs("\tr5 = %u (length of buffer)\n", state->Reg[5]);
-  dbug_hostfs("\tr6 = 0x%08x (pointer to special field if present)\n",
+  dbug_hostfs("\tr5 = %"PRIu32" (length of buffer)\n", state->Reg[5]);
+  dbug_hostfs("\tr6 = 0x%08"PRIx32" (pointer to special field if present)\n",
               state->Reg[6]);
 
   get_string(state, state->Reg[1], ro_path, sizeof(ro_path));
@@ -2146,14 +2146,14 @@ hostfs_func_23_canonicalise_disc_name(ARMul_State *state)
   char disc_name[1024];
 
   dbug_hostfs("\tCanonicalise special field and disc name\n");
-  dbug_hostfs("\tr2 = 0x%08x (ptr to disc name if present)\n", state->Reg[2]);
+  dbug_hostfs("\tr2 = 0x%08"PRIx32" (ptr to disc name if present)\n", state->Reg[2]);
   if (state->Reg[2] != 0) {
     get_string(state, state->Reg[2], disc_name, sizeof(disc_name));
     dbug_hostfs("\t   = \'%s\'\n", disc_name);
   }
-  dbug_hostfs("\tr4 = 0x%08x (ptr to canonical disc name to fill in)\n", state->Reg[4]);
+  dbug_hostfs("\tr4 = 0x%08"PRIx32" (ptr to canonical disc name to fill in)\n", state->Reg[4]);
   if (state->Reg[4] != 0) {
-    dbug_hostfs("\tr6 = %10u (length of buffer for canonical disc name)\n", state->Reg[6]);
+    dbug_hostfs("\tr6 = %10"PRIu32" (length of buffer for canonical disc name)\n", state->Reg[6]);
   }
 
   /* Check disc name if provided */
@@ -2192,7 +2192,7 @@ static void
 hostfs_func_24_resolve_wildcard(ARMul_State *state)
 {
   dbug_hostfs("\tResolve wildcard\n");
-  dbug_hostfs("\tr1 = 0x%08x (ptr to directory pathname)\n", state->Reg[1]);
+  dbug_hostfs("\tr1 = 0x%08"PRIx32" (ptr to directory pathname)\n", state->Reg[1]);
 
   state->Reg[4] = (uint32_t) -1;
 }
@@ -2209,8 +2209,8 @@ static void
 hostfs_func_27_read_boot_option(ARMul_State *state)
 {
   dbug_hostfs("\tRead boot option\n");
-  dbug_hostfs("\tr1 = 0x%08x (ptr to pathname of object on image)\n", state->Reg[1]);
-  dbug_hostfs("\tr6 = 0x%08x (pointer to special field if present)\n", state->Reg[6]);
+  dbug_hostfs("\tr1 = 0x%08"PRIx32" (ptr to pathname of object on image)\n", state->Reg[1]);
+  dbug_hostfs("\tr6 = 0x%08"PRIx32" (pointer to special field if present)\n", state->Reg[6]);
 
   state->Reg[2] = 2; /* Return boot option of 2 */
 }
@@ -2226,7 +2226,7 @@ hostfs_func_30_read_free_space32(ARMul_State *state)
   disk_info d;
 
   dbug_hostfs("\tRead free space 32\n");
-  dbug_hostfs("\tr1 = 0x%08x (ptr to pathname of object on image)\n", state->Reg[1]);
+  dbug_hostfs("\tr1 = 0x%08"PRIx32" (ptr to pathname of object on image)\n", state->Reg[1]);
 
   (void) path_disk_info(HOSTFS_ROOT, &d);
 
@@ -2256,7 +2256,7 @@ hostfs_func_35_read_free_space64(ARMul_State *state)
   disk_info d;
 
   dbug_hostfs("\tRead free space 64\n");
-  dbug_hostfs("\tr1 = 0x%08x (ptr to pathname of object on image)\n", state->Reg[1]);
+  dbug_hostfs("\tr1 = 0x%08"PRIx32" (ptr to pathname of object on image)\n", state->Reg[1]);
 
   (void) path_disk_info(HOSTFS_ROOT, &d);
 
@@ -2272,7 +2272,7 @@ hostfs_func(ARMul_State *state)
 {
   assert(state);
 
-  dbug_hostfs("Func %u\n", state->Reg[0]);
+  dbug_hostfs("Func %"PRIu32"\n", state->Reg[0]);
   switch (state->Reg[0]) {
   case 0:
     hostfs_func_0_chdir(state);
@@ -2341,14 +2341,14 @@ hostfs_register(ARMul_State *state)
   /* Does R0 contain the supported protocol? */
   if (state->Reg[0] == HOSTFS_PROTOCOL_VERSION) {
     /* Successful registration - acknowledge by setting R0 to 0xffffffff */
-    warn_hostfs("HostFS: Registration request version %u accepted\n", state->Reg[0]);
+    warn_hostfs("HostFS: Registration request version %"PRIu32" accepted\n", state->Reg[0]);
     state->Reg[0] = 0xffffffff;
     hostfs_reset();
     hostfs_state = HOSTFS_STATE_REGISTERED;
 
   } else {
     /* Failed registration due to an unsupported version */
-    warn_hostfs("HostFS: Registration request version %u rejected\n", state->Reg[0]);
+    warn_hostfs("HostFS: Registration request version %"PRIu32" rejected\n", state->Reg[0]);
     hostfs_state = HOSTFS_STATE_IGNORE;
   }
 }
@@ -2450,7 +2450,7 @@ hostfs(ARMul_State *state)
   }
 
   if(state->Reg[9] >= 0xb0)
-    warn_hostfs("\tReturning with error %x\n",state->Reg[9]);
+    warn_hostfs("\tReturning with error %"PRIx32"\n",state->Reg[9]);
 
 #if defined(__riscos__) && defined(__TARGET_UNIXLIB__)
   __riscosify_control = old_riscosify;

@@ -964,7 +964,7 @@ static void *emalloc(size_t n, const char *use)
     void *p;
 
     if ((p = malloc(n)) == NULL) {
-        ControlPane_Error(true,"arcem: malloc of %zu bytes for %s failed.",
+        ControlPane_Error(true,"arcem: malloc of %"PRIuSIZE" bytes for %s failed.",
             n, use);
     }
 

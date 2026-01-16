@@ -73,7 +73,7 @@ static void ProcessKey(ARMul_State *state, const SDL_KeyboardEvent *key, bool up
     }
   }
 
-  warn_kbd("ProcessKey: unknown key: keysym=%u\n", sym);
+  warn_kbd("ProcessKey: unknown key: keysym=%"PRIu32"\n", (uint32_t)sym);
 } /* ProcessKey */
 
 /*-----------------------------------------------------------------------------*/

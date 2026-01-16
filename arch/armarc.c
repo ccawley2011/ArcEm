@@ -58,14 +58,14 @@ static void DumpHandler(int sig) {
 
   UNUSED_VAR(sig);
 
-  warn("SIGUSR2 at PC=0x%x\n",ARMul_GetPC(state));
+  warn("SIGUSR2 at PC=0x%"PRIx32"\n",ARMul_GetPC(state));
   signal(SIGUSR2,DumpHandler);
   /* Register dump */
   warn("Current registers:\n"
-       "r0  = %08x  r1  = %08x  r2  = %08x  r3  = %08x\n"
-       "r4  = %08x  r5  = %08x  r6  = %08x  r7  = %08x\n"
-       "r8  = %08x  r9  = %08x  r10 = %08x  r11 = %08x\n"
-       "r12 = %08x  r13 = %08x  r14 = %08x  r15 = %08x\n",
+       "r0  = %08"PRIx32"  r1  = %08"PRIx32"  r2  = %08"PRIx32"  r3  = %08"PRIx32"\n"
+       "r4  = %08"PRIx32"  r5  = %08"PRIx32"  r6  = %08"PRIx32"  r7  = %08"PRIx32"\n"
+       "r8  = %08"PRIx32"  r9  = %08"PRIx32"  r10 = %08"PRIx32"  r11 = %08"PRIx32"\n"
+       "r12 = %08"PRIx32"  r13 = %08"PRIx32"  r14 = %08"PRIx32"  r15 = %08"PRIx32"\n",
     state->Reg[0], state->Reg[1], state->Reg[2], state->Reg[3],
     state->Reg[4], state->Reg[5], state->Reg[6], state->Reg[7],
     state->Reg[8], state->Reg[9], state->Reg[10], state->Reg[11],
@@ -73,8 +73,8 @@ static void DumpHandler(int sig) {
   if(state->Bank == FIQBANK)
   {
     warn("USR registers:\n"
-         "r8  = %08x  r9  = %08x  r10 = %08x  r11 = %08x\n"
-         "r12 = %08x  r13 = %08x  r14 = %08x\n",
+         "r8  = %08"PRIx32"  r9  = %08"PRIx32"  r10 = %08"PRIx32"  r11 = %08"PRIx32"\n"
+         "r12 = %08"PRIx32"  r13 = %08"PRIx32"  r14 = %08"PRIx32"\n",
       state->RegBank[USERBANK][8], state->RegBank[USERBANK][9],
       state->RegBank[USERBANK][10], state->RegBank[USERBANK][11],
       state->RegBank[USERBANK][12],
@@ -82,14 +82,14 @@ static void DumpHandler(int sig) {
   }
   else if(state->Bank != USERBANK)
   {
-    warn("USR registers:  r13 = %08x  r14 = %08x\n",
+    warn("USR registers:  r13 = %08"PRIx32"  r14 = %08"PRIx32"\n",
       state->RegBank[USERBANK][13], state->RegBank[USERBANK][14]);
   }
   if(state->Bank != FIQBANK)
   {
     warn("FIQ registers:\n"
-         "r8  = %08x  r9  = %08x  r10 = %08x  r11 = %08x\n"
-         "r12 = %08x  r13 = %08x  r14 = %08x\n",
+         "r8  = %08"PRIx32"  r9  = %08"PRIx32"  r10 = %08"PRIx32"  r11 = %08"PRIx32"\n"
+         "r12 = %08"PRIx32"  r13 = %08"PRIx32"  r14 = %08"PRIx32"\n",
       state->RegBank[FIQBANK][8], state->RegBank[FIQBANK][9],
       state->RegBank[FIQBANK][10], state->RegBank[FIQBANK][11],
       state->RegBank[FIQBANK][12],
@@ -97,18 +97,18 @@ static void DumpHandler(int sig) {
   }
   if(state->Bank != IRQBANK)
   {
-    warn("IRQ registers:  r13 = %08x  r14 = %08x\n",
+    warn("IRQ registers:  r13 = %08"PRIx32"  r14 = %08"PRIx32"\n",
       state->RegBank[IRQBANK][13], state->RegBank[IRQBANK][14]);
   }  
   if(state->Bank != SVCBANK)
   {
-    warn("SVC registers:  r13 = %08x  r14 = %08x\n",
+    warn("SVC registers:  r13 = %08"PRIx32"  r14 = %08"PRIx32"\n",
       state->RegBank[SVCBANK][13], state->RegBank[SVCBANK][14]);
   }  
 
   /* IOC timers */
   for(i=0;i<4;i++)
-    warn("Timer%d Count %08x Latch %08x\n",i,ioc.TimerCount[i],ioc.TimerInputLatch[i]);
+    warn("Timer%d Count %08"PRIx32" Latch %08x\n",i,ioc.TimerCount[i],ioc.TimerInputLatch[i]);
 
   /* Memory map */
   warn("MEMC using %dKB page size\n",4<<MEMC.PageSizeFlags);
@@ -146,7 +146,7 @@ static void DumpHandler(int sig) {
       }
       phys *= size;
       mangle = ARMul_ManglePhysAddr(phys);
-      warn("log %08x -> phy %08x (pre-mangle %08x) prot %s\n",logadr,mangle,phys,prot[(pt>>8)&3]);
+      warn("log %08"PRIx32" -> phy %08"PRIx32" (pre-mangle %08"PRIx32") prot %s\n",logadr,mangle,phys,prot[(pt>>8)&3]);
     }
   }
 
@@ -287,10 +287,10 @@ ARMul_MemoryInit(ARMul_State *state)
 #if defined(EXTNROM_SUPPORT)
   /* Add the space required by an Extension Rom */
   extnrom_size = (extnrom_calculate_size(CONFIG.sEXTNDirectory, &extnrom_entry_count)+4095)&~4095;
-  warn("extnrom_size = %u, extnrom_entry_count= %u\n",
+  warn("extnrom_size = %"PRIu32", extnrom_entry_count= %"PRIu32"\n",
        extnrom_size, extnrom_entry_count);
 #endif /* EXTNROM_SUPPORT */
-  dbug("Total ROM size required = %u KB\n",
+  dbug("Total ROM size required = %"PRIu32" KB\n",
        (MEMC.ROMHighSize + extnrom_size) / 1024);
 
   /* Now allocate ROMs & RAM in one chunk */
@@ -710,7 +710,7 @@ static void DMA_PutVal(ARMul_State *state,ARMword address)
     RegNum = (address >> 17) & 7;
     RegVal = (address >> 2) & 0x7fff;
 
-    dbug_memc("Write to MEMC register: Reg=%d Val=0x%x\n",RegNum,RegVal);
+    dbug_memc("Write to MEMC register: Reg=%d Val=0x%"PRIxFAST16"\n",RegNum,RegVal);
 
     switch (RegNum) {
       case 0: /* Vinit */
@@ -777,8 +777,8 @@ static void DMA_PutVal(ARMul_State *state,ARMword address)
         break;
 
       case 7: /* MEMC Control register */
-        dbug_memc("MEMC Control register set to 0x%x by PC=0x%x R[15]=0x%x\n",
-                  address, (unsigned int)state->pc, (unsigned int)state->Reg[15]);
+        dbug_memc("MEMC Control register set to 0x%"PRIx32" by PC=0x%"PRIx32" R[15]=0x%"PRIx32"\n",
+                  address, state->pc, state->Reg[15]);
         MEMC.ControlReg = RegVal;
         MEMC.PageSizeFlags = (MEMC.ControlReg & 3);
         state->OSmode = (MEMC.ControlReg&(1<<10));

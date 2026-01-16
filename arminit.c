@@ -216,7 +216,7 @@ void ARMul_Abort(ARMul_State *state, ARMword vector) {
   ARMword temp;
   state->Aborted = ARMul_ResetV;
 
-  dbug("ARMul_Abort: vector=0x%x\n",vector);
+  dbug("ARMul_Abort: vector=0x%"PRIx32"\n",vector);
 
   temp = state->Reg[15];
 
@@ -231,8 +231,8 @@ void ARMul_Abort(ARMul_State *state, ARMword vector) {
        SETABORT(R15IBIT,SVC26MODE);
        ARMul_R15Altered(state);
        state->Reg[14] = temp - 4;
-       /*dbug("DAG: In ARMul_Abort: Taking undefined instruction trap R[14] being set to: 0x%08x\n",
-               (unsigned int)(state->Reg[14])); */
+       /*dbug("DAG: In ARMul_Abort: Taking undefined instruction trap R[14] being set to: 0x%08"PRIx32"\n",
+               state->Reg[14]); */
        break;
 
     case ARMul_SWIV: /* Software Interrupt */
@@ -264,10 +264,10 @@ void ARMul_Abort(ARMul_State *state, ARMword vector) {
              return;
 #endif
            case ARCEM_SWI_DEBUG-ARCEM_SWI_CHUNK:
-             warn("r0 = %08x  r4 = %08x  r8  = %08x  r12 = %08x\n"
-                  "r1 = %08x  r5 = %08x  r9  = %08x  sp  = %08x\n"
-                  "r2 = %08x  r6 = %08x  r10 = %08x  lr  = %08x\n"
-                  "r3 = %08x  r7 = %08x  r11 = %08x  pc  = %08x\n"
+             warn("r0 = %08"PRIx32"  r4 = %08"PRIx32"  r8  = %08"PRIx32"  r12 = %08"PRIx32"\n"
+                  "r1 = %08"PRIx32"  r5 = %08"PRIx32"  r9  = %08"PRIx32"  sp  = %08"PRIx32"\n"
+                  "r2 = %08"PRIx32"  r6 = %08"PRIx32"  r10 = %08"PRIx32"  lr  = %08"PRIx32"\n"
+                  "r3 = %08"PRIx32"  r7 = %08"PRIx32"  r11 = %08"PRIx32"  pc  = %08"PRIx32"\n"
                   "\n",
                state->Reg[0], state->Reg[4], state->Reg[8], state->Reg[12],
                state->Reg[1], state->Reg[5], state->Reg[9], state->Reg[13],

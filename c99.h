@@ -57,11 +57,20 @@ typedef uint16_t uint_least16_t;
 #endif
 
 #if defined(_MSC_VER) && (_MSC_VER < 1800)
+#define PRId32 "I32d"
 #define PRIu32 "I32u"
 #define PRIx32 "I32x"
 #define SCNx32 "lx"
 #else
 #include <inttypes.h>
+#endif
+
+#ifdef _WIN32
+#define PRIuSIZE "Iu"
+#define PRIxSIZE "Ix"
+#else
+#define PRIuSIZE "zu"
+#define PRIxSIZE "zx"
 #endif
 
 #if defined(_MSC_VER) && (_MSC_VER < 1800)
