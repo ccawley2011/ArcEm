@@ -86,4 +86,16 @@ typedef unsigned char bool;
 #define restrict
 #endif
 
+#if GCC_VERSION >= 30000
+/* GCC 2 does not recognise %z format specifiers */
+#define GNU_PRINTF(x, y) __attribute__((__format__(__printf__, x, y)))
+#define MSVC_PRINTF
+#elif defined(_MSC_VER) && _MSC_VER > 1400
+#define GNU_PRINTF(x, y)
+#define MSVC_PRINTF _Printf_format_string_
+#else
+#define GNU_PRINTF(x, y)
+#define MSVC_PRINTF
+#endif
+
 #endif

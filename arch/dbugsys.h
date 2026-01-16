@@ -12,6 +12,8 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+#include "../c99.h"
+
 #undef IOC_TRACE
 #undef DEBUG
 #undef DEBUG_MEMC
@@ -51,8 +53,8 @@
 
 extern void log_msgv(int type, const char *format, va_list ap);
 
-static inline void
-log_msg(int type, const char *format, ...)
+GNU_PRINTF(2, 3) static inline void
+log_msg(int type, MSVC_PRINTF const char *format, ...)
 {
   va_list ap;
 
@@ -61,8 +63,8 @@ log_msg(int type, const char *format, ...)
   va_end(ap);
 }
 
-static inline void
-log_dbug(const char *format, ...)
+GNU_PRINTF(1, 2) static inline void
+log_dbug(MSVC_PRINTF const char *format, ...)
 {
   va_list ap;
 
@@ -71,8 +73,8 @@ log_dbug(const char *format, ...)
   va_end(ap);
 }
 
-static inline void
-log_warn(const char *format, ...)
+GNU_PRINTF(1, 2) static inline void
+log_warn(MSVC_PRINTF const char *format, ...)
 {
   va_list ap;
 
@@ -84,7 +86,7 @@ log_warn(const char *format, ...)
 /* This function has no coresponding body, the compiler
   is clever enough to use it to swallow the arguments to 
   debugging calls */
-int log_null(const char *format, ...);
+GNU_PRINTF(1, 2) int log_null(MSVC_PRINTF const char *format, ...);
 
 #ifdef IOC_TRACE
 # define dbug_ioc log_dbug

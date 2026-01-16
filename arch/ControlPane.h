@@ -14,6 +14,6 @@ void ControlPane_Event(ARMul_State *state, XEvent *e);
 #endif
 
 /* Report an error and exit when fatal */
-void ControlPane_Error(bool fatal,const char *fmt,...);
+GNU_PRINTF(2, 3) void ControlPane_Error(bool fatal,MSVC_PRINTF const char *fmt,...);
 
 #endif
