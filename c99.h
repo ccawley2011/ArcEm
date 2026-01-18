@@ -95,6 +95,14 @@ typedef unsigned char bool;
 #define restrict
 #endif
 
+#if __STDC_VERSION__ >= 199901L
+/* __func__ is available */
+#elif defined(__func__)
+/* __func__ is available */
+#else
+#define __func__ __FUNCTION__
+#endif
+
 #if GCC_VERSION >= 30000
 /* GCC 2 does not recognise %z format specifiers */
 #define GNU_PRINTF(x, y) __attribute__((__format__(__printf__, x, y)))

@@ -1079,7 +1079,7 @@ hostfs_open(ARMul_State *state)
   /* Check for errors from opening the file */
   if (open_file[idx] == NULL) {
     state->Reg[1] = 0; /* Signal to RISC OS file not found */
-    state->Reg[9] = errno_to_hostfs_error(host_pathname,__FUNCTION__,"open");
+    state->Reg[9] = errno_to_hostfs_error(host_pathname,__func__,"open");
     return;
   }
 
@@ -1348,7 +1348,7 @@ hostfs_write_file(ARMul_State *state, bool with_data)
                    new_pathname, sizeof(new_pathname),
                    state->Reg[2], state->Reg[3]);
     if (rename(host_pathname, new_pathname)) {
-      state->Reg[9] = errno_to_hostfs_error(host_pathname,__FUNCTION__,"rename");
+      state->Reg[9] = errno_to_hostfs_error(host_pathname,__func__,"rename");
       return;
     }
     break;
@@ -1361,7 +1361,7 @@ hostfs_write_file(ARMul_State *state, bool with_data)
 
   f = fopen64(new_pathname, "wb");
   if (!f) {
-    state->Reg[9] = errno_to_hostfs_error(new_pathname,__FUNCTION__,"open");
+    state->Reg[9] = errno_to_hostfs_error(new_pathname,__func__,"open");
     return;
   }
 
@@ -1516,13 +1516,13 @@ hostfs_file_6_delete(ARMul_State *state)
   switch (object_info.type) {
   case OBJECT_TYPE_FILE:
     if (unlink(host_pathname)) {
-      state->Reg[9] = errno_to_hostfs_error(host_pathname,__FUNCTION__,"delete file");
+      state->Reg[9] = errno_to_hostfs_error(host_pathname,__func__,"delete file");
     }
     break;
 
   case OBJECT_TYPE_DIRECTORY:
     if (rmdir(host_pathname)) {
-      state->Reg[9] = errno_to_hostfs_error(host_pathname,__FUNCTION__,"delete directory");
+      state->Reg[9] = errno_to_hostfs_error(host_pathname,__func__,"delete directory");
     }
     break;
 
@@ -1604,7 +1604,7 @@ hostfs_file_8_create_dir(ARMul_State *state)
 
   /* Create directory */
   if (mkdir(host_pathname, 0777)) {
-    state->Reg[9] = errno_to_hostfs_error(host_pathname,__FUNCTION__,"create directory");
+    state->Reg[9] = errno_to_hostfs_error(host_pathname,__func__,"create directory");
   }
 }
 
@@ -1640,7 +1640,7 @@ hostfs_file_255_load_file(ARMul_State *state)
 
   f = fopen64(host_pathname, "rb");
   if (!f) {
-    state->Reg[9] = errno_to_hostfs_error(host_pathname,__FUNCTION__,"open");
+    state->Reg[9] = errno_to_hostfs_error(host_pathname,__func__,"open");
     return;
   }
 
