@@ -108,7 +108,7 @@ static void DumpHandler(int sig) {
 
   /* IOC timers */
   for(i=0;i<4;i++)
-    warn("Timer%d Count %08"PRIx32" Latch %08x\n",i,ioc.TimerCount[i],ioc.TimerInputLatch[i]);
+    warn("Timer%d Count %08"PRIx32" Latch %08x\n",i,(uint32_t)ioc.TimerCount[i],ioc.TimerInputLatch[i]);
 
   /* Memory map */
   warn("MEMC using %dKB page size\n",4<<MEMC.PageSizeFlags);

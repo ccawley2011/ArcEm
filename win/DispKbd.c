@@ -549,7 +549,7 @@ void ProcessKey(ARMul_State *state, int nVirtKey, int nKeyStat) {
     }
   }
 
-  warn_kbd("ProcessKey: unknown key: keysym=%u\n", nVirtKey);
+  warn_kbd("ProcessKey: unknown key: keysym=%d\n", nVirtKey);
 } /* ProcessKey */
 
 

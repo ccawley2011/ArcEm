@@ -573,7 +573,7 @@ static void PDD_Name(EventFunc)(ARMul_State *state,CycleCount nowtime)
         return;
       }
       
-      warn_vidc("New mode: %dx%d, %dHz (CR %"PRIxFAST16" ClockIn %"PRId32"Mhz)\n",Width,Height,FrameRate,NewCR,ClockIn/2000000);
+      warn_vidc("New mode: %dx%d, %dHz (CR %"PRIxFAST16" ClockIn %"PRIu32"Mhz)\n",Width,Height,FrameRate,NewCR,ClockIn/2000000);
       DC.LastHostWidth = Width;
       DC.LastHostHeight = Height;
       DC.LastHostHz = FrameRate;

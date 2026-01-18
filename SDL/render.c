@@ -452,7 +452,7 @@ bool DisplayDev_Init(ARMul_State *state)
   } else if (SDL_BYTESPERPIXEL(pf) == 2) {
     return DisplayDev_Set(state,&SDD16R_DisplayDev);
   } else {
-    ControlPane_Error(false,"Unsupported bytes per pixel: %"PRId32, SDL_BYTESPERPIXEL(pf));
+    ControlPane_Error(false,"Unsupported bytes per pixel: %"PRIu32, SDL_BYTESPERPIXEL(pf));
     return false;
   }
 }

@@ -1016,8 +1016,8 @@ FDC_IsFloppyInserted(uint_fast8_t drive)
 static void efseek(FILE *fp, long offset, int whence)
 {
   if (fseek(fp, offset, whence)) {
-    ControlPane_Error(true,"efseek(%p, %ld, %d) failed.", fp, offset,
-            whence);
+    ControlPane_Error(true,"efseek(%p, %ld, %d) failed.", (void *)fp,
+            offset, whence);
   }
 
   return;

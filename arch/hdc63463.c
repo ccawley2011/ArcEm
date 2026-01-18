@@ -447,7 +447,7 @@ static bool SetFilePtr(ARMul_State *state, uint_fast8_t drive, uint_fast8_t head
     dbug("SetFilePtr: drive=%u head=%u cyl=%"PRIuFAST16" sec=%u\n", drive, head, cyl, sect);
 
     if (drive > DIM(CONFIG.aST506DiskShapes)) {
-        ControlPane_Error(true,"SetFilePtr: drive %d out of range 0..%"PRIuSIZE,
+        ControlPane_Error(true,"SetFilePtr: drive %u out of range 0..%"PRIuSIZE,
             drive, DIM(CONFIG.aST506DiskShapes));
     }
 

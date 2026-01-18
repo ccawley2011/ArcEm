@@ -355,7 +355,7 @@ GetWord_IOCReg(ARMul_State *state, uint_fast8_t Register)
 
     default:
       Result = 0;
-      warn_ioc("IOCRead: Read of unknown IOC register %d\n", Register);
+      warn_ioc("IOCRead: Read of unknown IOC register %u\n", Register);
       break;
   }
 
@@ -464,7 +464,7 @@ PutVal_IOCReg(ARMul_State *state, uint_fast8_t Register, uint_fast8_t data)
       break;
 
     default:
-      warn_ioc("IOC Write: Bad IOC register write reg=%d data=0x%x\n",
+      warn_ioc("IOC Write: Bad IOC register write reg=%u data=0x%x\n",
                Register, data);
       break;
   } /* Register */

@@ -473,7 +473,7 @@ static void Sound_Process(ARMul_State *state,int32_t avail)
     b = ((uint64_t) Sound_HostRate)*24*(VIDC.SoundFreq+2);
     soundTimeStep = (uint32_t)((a<<TIMESHIFT)/b);
     soundScale = (uint32_t)((b<<16)/a);
-    warn_sound("New sample period %d (VIDC %"PRId32"MHz) host %"PRId32"Hz -> timestep %08"PRIx32" scale %08"PRIx32"\n",VIDC.SoundFreq+2,clockin/1000000,Sound_HostRate>>10,soundTimeStep,soundScale);
+    warn_sound("New sample period %d (VIDC %"PRIu32"MHz) host %"PRIu32"Hz -> timestep %08"PRIx32" scale %08"PRIx32"\n",VIDC.SoundFreq+2,clockin/1000000,Sound_HostRate>>10,soundTimeStep,soundScale);
     soundTime = 0;
   }
   if(avail)

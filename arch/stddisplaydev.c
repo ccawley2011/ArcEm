@@ -2014,7 +2014,7 @@ static void SDD_Name(FrameStart)(ARMul_State *state,CycleCount nowtime)
         return;
       }
       
-      warn_vidc("New mode: %dx%d, %dHz (CR %"PRIxFAST16" ClockIn %"PRId32"Mhz)\n",Width,Height,FrameRate,NewCR,ClockIn/2000000);
+      warn_vidc("New mode: %dx%d, %dHz (CR %"PRIxFAST16" ClockIn %"PRIu32"Mhz)\n",Width,Height,FrameRate,NewCR,ClockIn/2000000);
 #ifdef VIDEO_STATS
       vidstats_Dump("Stats for previous mode");
 #endif
