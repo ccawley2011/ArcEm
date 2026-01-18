@@ -66,6 +66,9 @@ static inline void FastMap_PhyClobberFunc(ARMul_State *state,ARMword *addr)
 {
 #ifdef ARMUL_INSTR_FUNC_CACHE
 	*(FastMap_Phy2Func(state,addr)) = FASTMAP_CLOBBEREDFUNC;
+#else
+	UNUSED_VAR(state);
+	UNUSED_VAR(addr);
 #endif
 }
 
@@ -77,6 +80,10 @@ static inline void FastMap_PhyClobberFuncRange(ARMul_State *state,ARMword *addr,
 		*func++ = FASTMAP_CLOBBEREDFUNC;
 		len -= 4;
 	}
+#else
+	UNUSED_VAR(state);
+	UNUSED_VAR(addr);
+	UNUSED_VAR(len);
 #endif
 }
 

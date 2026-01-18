@@ -83,6 +83,7 @@ unsigned ARMul_NoCoPro4W(ARMul_State *state,unsigned,ARMword,ARMword *);
 
 static inline void ARMul_LDC(ARMul_State *state,ARMword instr,ARMword address)
 {
+ UNUSED_VAR(instr);
  UNDEF_LSCPCBaseWb;
  if (ADDREXCEPT(address)) {
     INTERNALABORT(address);
@@ -92,6 +93,7 @@ static inline void ARMul_LDC(ARMul_State *state,ARMword instr,ARMword address)
 
 static inline void ARMul_STC(ARMul_State *state,ARMword instr,ARMword address)
 {
+ UNUSED_VAR(instr);
  UNDEF_LSCPCBaseWb;
  if (ADDREXCEPT(address)) {
     INTERNALABORT(address);
@@ -101,17 +103,22 @@ static inline void ARMul_STC(ARMul_State *state,ARMword instr,ARMword address)
 
 static inline void ARMul_MCR(ARMul_State *state,ARMword instr, ARMword source)
 {
+ UNUSED_VAR(instr);
+ UNUSED_VAR(source);
  ARMul_Abort(state,ARMul_UndefinedInstrV);
 }
 
 static inline bool ARMul_MRC(ARMul_State *state,ARMword instr,ARMword *result)
 {
+ UNUSED_VAR(instr);
+ UNUSED_VAR(result);
  ARMul_Abort(state,ARMul_UndefinedInstrV);
  return false;
 }
 
 static inline void ARMul_CDP(ARMul_State *state,ARMword instr)
 {
+ UNUSED_VAR(instr);
  ARMul_Abort(state,ARMul_UndefinedInstrV);
 }
 
