@@ -20,6 +20,7 @@ extern SDL_Window *window;
 #if SDL_VERSION_ATLEAST(2, 0, 0)
 #define SDL_RenderTexture SDL_RenderCopyF
 #define SDL_CreateSurface(w, h, f) SDL_CreateRGBSurfaceWithFormat(0, w, h, SDL_BITSPERPIXEL(f), f)
+#define SDL_CreatePalette SDL_AllocPalette
 
 static inline bool SDL_SetSurfaceColorKey(SDL_Surface *surface, bool enabled, Uint32 key) {
   return (SDL_SetColorKey(surface, enabled ? SDL_TRUE : 0, key) == 0);

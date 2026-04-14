@@ -35,9 +35,15 @@
 static SDL_Surface *screen = NULL;
 static SDL_Surface *sdd_surface = NULL;
 static SDL_Surface *mouse_surface = NULL;
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+static SDL_Palette *sdd_palette = NULL;
+static SDL_Palette *mouse_palette = NULL;
+#endif
 static SDL_Rect mouse_rect;
+static int palette_offset = 0;
 
 static uint32_t GetColour(ARMul_State *state,unsigned int col);
+static SDL_Color GetColourStruct(ARMul_State *state,unsigned int col);
 static void SetupScreen(ARMul_State *state,int *width,int *height,int bpp);
 static void PollDisplay(ARMul_State *state,int XScale,int YScale);
 
@@ -271,8 +277,6 @@ static void SDD_Name(Host_PollDisplay)(ARMul_State *state) {
 
 /* ------------------------------------------------------------------ */
 
-#if !SDL_VERSION_ATLEAST(2, 0, 0)
-
 /* Palettised display code */
 #define PDD_Name(x) pdd_##x
 
@@ -289,21 +293,30 @@ static void PDD_Name(Host_SetPaletteEntry)(ARMul_State *state,int i,uint_fast16_
 
   UNUSED_VAR(state);
 
-  /* Convert to 8-bit component values */
-  col.r = (phys & 0xf)*0x11;
-  col.g = ((phys>>4) & 0xf)*0x11;
-  col.b = ((phys>>8) & 0xf)*0x11;
+  col = GetColourStruct(state, phys);
 
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+  SDL_SetPaletteColors(sdd_palette, &col, i, 1);
+#else
   SDL_SetColors(screen, &col, i, 1);
   SDL_SetColors(sdd_surface, &col, i, 1);
+#endif
 }
 
 static void PDD_Name(Host_SetCursorPaletteEntry)(ARMul_State *state,int i,uint_fast16_t phys)
 {
-  /* TODO */
-  UNUSED_VAR(state);
-  UNUSED_VAR(i);
-  UNUSED_VAR(phys);
+  SDL_Color col;
+
+  if (palette_offset > 0 && palette_offset < 256)
+      PDD_Name(Host_SetPaletteEntry)(state, palette_offset + i + 1, phys);
+
+  col = GetColourStruct(state, phys);
+
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+  SDL_SetPaletteColors(mouse_palette, &col, i + 1, 1);
+#else
+  SDL_SetColors(mouse_surface, &col, i + 1, 1);
+#endif
 }
 
 static void PDD_Name(Host_SetBorderColour)(ARMul_State *state,uint_fast16_t phys)
@@ -401,7 +414,7 @@ void PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth
   HD.Width = width;
   HD.Height = height;
 
-  SetupScreen(state,&HD.Width,&HD.Height,8);
+  SetupScreen(state,&HD.Width,&HD.Height,1<<depth);
 
   /* Calculate expansion params */
   if((depth == 3) && (HD.XScale == 1))
@@ -437,8 +450,6 @@ static void PDD_Name(Host_PollDisplay)(ARMul_State *state) {
   PollDisplay(state,HD.XScale,HD.YScale);
 }
 
-#endif
-
 /* ------------------------------------------------------------------ */
 
 static uint32_t GetColour(ARMul_State *state,unsigned int col)
@@ -453,64 +464,60 @@ static uint32_t GetColour(ARMul_State *state,unsigned int col)
   b = ((col>>8) & 0xf)*0x11;
 
 #if SDL_VERSION_ATLEAST(3, 0, 0)
-  return SDL_MapRGB(SDL_GetPixelFormatDetails(screen->format), NULL, r, g, b);
+  return SDL_MapRGB(SDL_GetPixelFormatDetails(screen->format), sdd_palette, r, g, b);
 #else
   return SDL_MapRGB(screen->format, r, g, b);
 #endif
 }
 
+static SDL_Color GetColourStruct(ARMul_State *state,unsigned int phys)
+{
+  SDL_Color col;
+
+  UNUSED_VAR(state);
+
+  /* Convert to 8-bit component values */
+  col.r = ((phys>>0) & 0xf)*0x11;
+  col.g = ((phys>>4) & 0xf)*0x11;
+  col.b = ((phys>>8) & 0xf)*0x11;
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+  col.a = SDL_ALPHA_OPAQUE;
+#endif
+
+  return col;
+}
+
 #undef HD
 
 /* Refresh the mouse's image                                                    */
-static void RefreshMouse(ARMul_State *state,int XScale,int YScale) {
-#if SDL_VERSION_ATLEAST(3, 0, 0)
-  SDL_Palette *palette;
-#endif
+static bool RefreshMouse(ARMul_State *state,int XScale,int YScale) {
   int x,y,offset, repeat;
   int memptr;
   int Height = ((int)VIDC.Vert_CursorEnd - (int)VIDC.Vert_CursorStart)*YScale;
-  SDL_Color cursorPal[3];
   uint8_t *dst;
 
   /* TODO: Implement horizontal scaling */
   UNUSED_VAR(XScale);
 
-  if (Height < 0) Height = 0;
+  if (Height <= 0) return false;
 
-  if (mouse_surface && mouse_surface->h != Height)
-      SDL_DestroySurface(mouse_surface), mouse_surface = NULL;
-#if SDL_VERSION_ATLEAST(3, 0, 0)
-  if (!mouse_surface) {
-      mouse_surface = SDL_CreateSurface(32, Height, SDL_PIXELFORMAT_INDEX8);
-      palette = SDL_CreateSurfacePalette(mouse_surface);
-  } else {
-      palette = SDL_GetSurfacePalette(mouse_surface);
-  }
-#else
-  if (!mouse_surface)
-      mouse_surface = SDL_CreateRGBSurface(SDL_SWSURFACE, 32, Height, 8, 0, 0, 0, 0);
-#endif
   mouse_rect.w = 32;
   mouse_rect.h = Height;
 
-  /* Cursor palette */
-  for(x=0; x<3; x++) {
-    uint_fast16_t phys = VIDC.CursorPalette[x];
-    cursorPal[x].r = (phys & 0xf)*0x11;
-    cursorPal[x].g = ((phys>>4) & 0xf)*0x11;
-    cursorPal[x].b = ((phys>>8) & 0xf)*0x11;
+  if (palette_offset == 0) {
+    /* Cursor palette */
+    SDL_Color cursorPal[3];
+
+    for(x=0; x<3; x++) {
+      cursorPal[x] = GetColourStruct(state, VIDC.CursorPalette[x]);
+    }
+
 #if SDL_VERSION_ATLEAST(2, 0, 0)
-    cursorPal[x].a = SDL_ALPHA_OPAQUE;
+    SDL_SetPaletteColors(mouse_palette, cursorPal, 1, 3);
+#else
+    SDL_SetColors(mouse_surface, cursorPal, 1, 3);
 #endif
   }
-#if SDL_VERSION_ATLEAST(3, 0, 0)
-  SDL_SetPaletteColors(palette, cursorPal, 1, 3);
-#elif SDL_VERSION_ATLEAST(2, 0, 0)
-  SDL_SetPaletteColors(mouse_surface->format->palette, cursorPal, 1, 3);
-#else
-  SDL_SetColors(mouse_surface, cursorPal, 1, 3);
-#endif
-  SDL_SetSurfaceColorKey(mouse_surface, true, 0);
 
   SDL_LockSurface(mouse_surface);
 
@@ -529,7 +536,7 @@ static void RefreshMouse(ARMul_State *state,int XScale,int YScale) {
         dst[x] = ((tmp[x/16]>>((x & 15)*2)) & 3);
       }; /* x */
       dst += mouse_surface->pitch;
-    } else return;
+    } else return true;
     if(++repeat == YScale) {
       memptr += 8;
       offset += 8;
@@ -538,24 +545,35 @@ static void RefreshMouse(ARMul_State *state,int XScale,int YScale) {
   }; /* y */
 
   SDL_UnlockSurface(mouse_surface);
+  return true;
 } /* RefreshMouse */
 
 static void SetupScreen(ARMul_State *state,int *width,int *height,int bpp)
 {
   UNUSED_VAR(state);
-  UNUSED_VAR(bpp);
 
-  if (!sdd_surface)
-      SDL_DestroySurface(sdd_surface);
 #if SDL_VERSION_ATLEAST(2, 0, 0)
+  if (!sdd_palette)
+      sdd_palette = SDL_CreatePalette(256);
+  if (!mouse_palette)
+      mouse_palette = SDL_CreatePalette(4);
+
   SDL_SetWindowSize(window, *width, *height);
   screen = SDL_GetWindowSurface(window);
+  SDL_SetSurfacePalette(screen, sdd_palette);
 #else
   screen = SDL_SetVideoMode(*width, *height, screen->format->BitsPerPixel,
                             SDL_SWSURFACE | SDL_HWPALETTE);
 #endif
+
+  if (sdd_surface)
+      SDL_DestroySurface(sdd_surface);
+  if (mouse_surface)
+      SDL_DestroySurface(mouse_surface);
+
 #if SDL_VERSION_ATLEAST(3, 0, 0)
   sdd_surface = SDL_CreateSurface(screen->w, screen->h, screen->format);
+  mouse_surface = SDL_CreateSurface(32, screen->h, SDL_PIXELFORMAT_INDEX8);
 #else
   sdd_surface = SDL_CreateRGBSurface(SDL_SWSURFACE, screen->w, screen->h,
                                      screen->format->BitsPerPixel,
@@ -563,10 +581,18 @@ static void SetupScreen(ARMul_State *state,int *width,int *height,int bpp)
                                      screen->format->Gmask,
                                      screen->format->Bmask,
                                      screen->format->Amask);
+  mouse_surface = SDL_CreateRGBSurface(SDL_SWSURFACE, 32, screen->h, 8, 0, 0, 0, 0);
 #endif
+#if SDL_VERSION_ATLEAST(2, 0, 0)
+  SDL_SetSurfacePalette(sdd_surface, sdd_palette);
+  SDL_SetSurfacePalette(mouse_surface, mouse_palette);
+#endif
+  SDL_SetSurfaceColorKey(mouse_surface, true, 0);
 
   /* Screen is expected to be cleared */
   SDL_FillSurfaceRect(sdd_surface, NULL, GetColour(state, 0));
+
+  palette_offset = (bpp > 8) ? 0 : (1 << bpp);
 
   *width = screen->w;
   *height = screen->h;
@@ -574,10 +600,11 @@ static void SetupScreen(ARMul_State *state,int *width,int *height,int bpp)
 
 static void PollDisplay(ARMul_State *state,int XScale,int YScale)
 {
-  RefreshMouse(state,XScale,YScale);
+  bool has_mouse = RefreshMouse(state,XScale,YScale);
 
   SDL_BlitSurface(sdd_surface, NULL, screen, NULL);
-  SDL_BlitSurface(mouse_surface, NULL, screen, &mouse_rect);
+  if (has_mouse)
+    SDL_BlitSurface(mouse_surface, NULL, screen, &mouse_rect);
 
 #if SDL_VERSION_ATLEAST(2, 0, 0)
   SDL_UpdateWindowSurface(window);
@@ -614,10 +641,8 @@ bool DisplayDev_Init(ARMul_State *state)
       return DisplayDev_Set(state,&SDD32_DisplayDev);
   } else if (bpp == 2) {
       return DisplayDev_Set(state,&SDD16_DisplayDev);
-#if !SDL_VERSION_ATLEAST(2, 0, 0)
   } else if (bpp == 1) {
       return DisplayDev_Set(state,&PDD_DisplayDev);
-#endif
   } else {
       ControlPane_Error(false,"Unsupported bytes per pixel: %d", bpp);
       return false;
