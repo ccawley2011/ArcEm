@@ -76,7 +76,7 @@ int __riscosify_control = 0;
 
 #include "hostfs.h"
 
-#if defined NO_OPEN64 || defined __MACH__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __NetBSD__ || defined __HAIKU__
+#if defined NO_OPEN64 || defined __MACH__ || defined __FreeBSD__ || defined __OpenBSD__ || defined __NetBSD__ || defined __HAIKU__ || defined __DJGPP__
 /* ftello64/fseeko64 don't exist, but ftello/fseeko do. Likewise, we need to use regular fopen. */
 #define ftello64 ftello
 #define fseeko64 fseeko

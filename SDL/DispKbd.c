@@ -181,7 +181,12 @@ int main(int argc, char *argv[])
 {
   int exit_code;
 
-  if (SDL_FAILED(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))) {
+#ifdef SOUND_SUPPORT
+  if (SDL_FAILED(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)))
+#else
+  if (SDL_FAILED(SDL_Init(SDL_INIT_VIDEO)))
+#endif
+  {
     ControlPane_Error(false,"Failed to initialise SDL: %s", SDL_GetError());
     return EXIT_FAILURE;
   }

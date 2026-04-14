@@ -10,7 +10,7 @@
 #include "platform.h"
 
 /* TODO: Allow selecting the display device at runtime? */
-#if !SDL_VERSION_ATLEAST(2, 0, 0)
+#if !SDL_VERSION_ATLEAST(2, 0, 0) || defined(SDL_PLATFORM_DOS)
 
 #include <stdlib.h>
 
@@ -559,6 +559,11 @@ static void SetupScreen(ARMul_State *state,int *width,int *height,int bpp)
       mouse_palette = SDL_CreatePalette(4);
 
   SDL_SetWindowSize(window, *width, *height);
+  {
+    SDL_DisplayMode closest;
+    SDL_GetClosestFullscreenDisplayMode(SDL_GetDisplayForWindow(window), *width, *height, 0.0f, false, &closest);
+    SDL_SetWindowFullscreenMode(window, &closest);
+  }
   screen = SDL_GetWindowSurface(window);
   SDL_SetSurfacePalette(screen, sdd_palette);
 #else
@@ -625,6 +630,14 @@ bool DisplayDev_Init(ARMul_State *state)
       ControlPane_Error(false,"Failed to create initial window: %s", SDL_GetError());
       return false;
   }
+
+#ifdef SDL_PLATFORM_DOS
+  {
+    SDL_DisplayMode closest;
+    SDL_GetClosestFullscreenDisplayMode(SDL_GetDisplayForWindow(window), 640, 480, 0.0f, false, &closest);
+    SDL_SetWindowFullscreenMode(window, &closest);
+  }
+#endif
 
   screen = SDL_GetWindowSurface(window);
   if (!screen) {
