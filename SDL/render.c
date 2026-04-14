@@ -319,6 +319,9 @@ static void SetupScreen(ARMul_State *state,int width,int height)
     SDL_DestroySurface(sdd_surface);
   sdd_surface = SDL_CreateSurface(width, height, format->format);
 
+  /* Screen is expected to be cleared */
+  SDL_FillSurfaceRect(sdd_surface, NULL, GetColour(state, 0));
+
   if (!sdd_texture)
     SDL_DestroyTexture(sdd_texture);
   sdd_texture = SDL_CreateTexture(renderer, format->format, SDL_TEXTUREACCESS_STREAMING, width, height);

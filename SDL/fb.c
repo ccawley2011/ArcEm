@@ -564,6 +564,10 @@ static void SetupScreen(ARMul_State *state,int *width,int *height,int bpp)
                                      screen->format->Bmask,
                                      screen->format->Amask);
 #endif
+
+  /* Screen is expected to be cleared */
+  SDL_FillSurfaceRect(sdd_surface, NULL, GetColour(state, 0));
+
   *width = screen->w;
   *height = screen->h;
 }
