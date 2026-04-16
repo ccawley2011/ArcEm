@@ -16,6 +16,12 @@
 extern SDL_Window *window;
 #endif
 
+#if SDL_VERSION_ATLEAST(3, 0, 0)
+#define SDL_FAILED(x) (!x)
+#else
+#define SDL_FAILED(x) (x < 0)
+#endif
+
 #if !SDL_VERSION_ATLEAST(3, 0, 0)
 #if SDL_VERSION_ATLEAST(2, 0, 0)
 #define SDL_RenderTexture SDL_RenderCopyF

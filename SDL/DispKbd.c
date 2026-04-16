@@ -13,6 +13,7 @@
 
 #include "../armdefs.h"
 #include "../dagstandalone.h"
+#include "../arch/ControlPane.h"
 #include "../arch/dbugsys.h"
 #include "../arch/keyboard.h"
 
@@ -178,7 +179,16 @@ Kbd_PollHostKbd(ARMul_State *state)
 /*-----------------------------------------------------------------------------*/
 int main(int argc, char *argv[])
 {
-  SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO);
+  int exit_code;
 
-  return dagstandalone(argc, argv);
+  if (SDL_FAILED(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO))) {
+    ControlPane_Error(false,"Failed to initialise SDL: %s", SDL_GetError());
+    return EXIT_FAILURE;
+  }
+
+  exit_code = dagstandalone(argc, argv);
+
+  SDL_Quit();
+
+  return exit_code;
 }

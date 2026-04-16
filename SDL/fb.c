@@ -621,23 +621,42 @@ bool DisplayDev_Init(ARMul_State *state)
   /* Setup display and cursor bitmaps */
 #if SDL_VERSION_ATLEAST(3, 0, 0)
   window = SDL_CreateWindow("ArcEm", 640, 512, 0);
+  if (!window) {
+      ControlPane_Error(false,"Failed to create initial window: %s", SDL_GetError());
+      return false;
+  }
+
   screen = SDL_GetWindowSurface(window);
+  if (!screen) {
+      ControlPane_Error(false,"Failed to get the window surface: %s", SDL_GetError());
+      return false;
+  }
   bpp = SDL_BYTESPERPIXEL(screen->format);
 #elif SDL_VERSION_ATLEAST(2, 0, 0)
   window = SDL_CreateWindow("ArcEm", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                             640, 512, 0);
+  if (!window) {
+      ControlPane_Error(false,"Failed to create initial window: %s", SDL_GetError());
+      return false;
+  }
+
   screen = SDL_GetWindowSurface(window);
+  if (!screen) {
+      ControlPane_Error(false,"Failed to get the window surface: %s", SDL_GetError());
+      return false;
+  }
   bpp = screen->format->BytesPerPixel;
 #else
   screen = SDL_SetVideoMode(640, 512, 0, SDL_SWSURFACE);
+  if (!screen) {
+      ControlPane_Error(false,"Failed to create initial window: %s", SDL_GetError());
+      return false;
+  }
   SDL_WM_SetCaption("ArcEm", "ArcEm");
   bpp = screen->format->BytesPerPixel;
 #endif
 
-  if (!screen) {
-      ControlPane_Error(false,"Failed to create initial window: %s", SDL_GetError());
-      return false;
-  } else if (bpp == 4) {
+  if (bpp == 4) {
       return DisplayDev_Set(state,&SDD32_DisplayDev);
   } else if (bpp == 2) {
       return DisplayDev_Set(state,&SDD16_DisplayDev);
