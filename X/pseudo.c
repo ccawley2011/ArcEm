@@ -52,7 +52,7 @@ static SDD_HostColour SDD_Name(Host_GetColour)(ARMul_State *state,unsigned int c
   return (tint/3)+(col&0xc)+((col&0xc0)>>2)+((col&0xc00)>>4);
 }  
 
-static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz);
+static bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz);
 
 static inline SDD_Row SDD_Name(Host_BeginRow)(ARMul_State *state,int row,int offset);
 
@@ -104,13 +104,14 @@ static inline SDD_Row SDD_Name(Host_BeginRow)(ARMul_State *state,int row,int off
   return PD.ImageData+row*HD.Width+offset;
 }
 
-static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz)
+static bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz)
 {
   UNUSED_VAR(hz);
 
   if (width > MaxVideoWidth || height > MaxVideoHeight) {
-      ControlPane_Error(true,"Resize_Window: new size (%d, %d) exceeds maximum (%d, %d)",
+      ControlPane_Error(false,"Resize_Window: new size (%d, %d) exceeds maximum (%d, %d)",
           width, height, MaxVideoWidth, MaxVideoHeight);
+      return false;
   }
 
   HD.XScale = 1;
@@ -141,6 +142,8 @@ static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,in
 
   UpdateStart = 0;
   UpdateEnd = HD.Width*HD.Height-1;
+
+  return true;
 }
 
 /* Refresh the mouses image                                                   */

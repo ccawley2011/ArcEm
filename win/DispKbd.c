@@ -97,7 +97,7 @@ static SDD_HostColour SDD_Name(Host_GetColour)(ARMul_State *state,unsigned int c
   return hostCol;
 }
 
-static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz);
+static bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz);
 
 static inline SDD_Row SDD_Name(Host_BeginRow)(ARMul_State *state,int row,int offset)
 {
@@ -149,13 +149,14 @@ void SDD_Name(Host_PollDisplay)(ARMul_State *state);
 
 #include "../arch/stddisplaydev.c"
 
-static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz)
+static bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz)
 {
   UNUSED_VAR(hz);
 
   if((width > MonitorWidth) || (height > MonitorHeight))
   {
-    ControlPane_Error(true,"Mode %dx%d too big",width,height);
+    ControlPane_Error(false,"Mode %dx%d too big",width,height);
+    return false;
   }
   HD.Width = width;
   HD.Height = height;
@@ -184,6 +185,8 @@ static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,in
   resizeWindow(HD.Width,HD.Height);
   /* Screen is expected to be cleared */
   memset(dibbmp,0,dibstride*HD.Height);
+
+  return true;
 }
 
 /* Refresh the mouse's image */
@@ -269,7 +272,7 @@ typedef struct {
   int offset;
 } PDD_Row;
 
-static void PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth,int hz);
+static bool PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth,int hz);
 
 static void PDD_Name(Host_SetPaletteEntry)(ARMul_State *state,int i,uint_fast16_t phys)
 {
@@ -370,13 +373,14 @@ static void PDD_Name(Host_DrawBorderRect)(ARMul_State *state,int x,int y,int wid
 
 #include "../arch/paldisplaydev.c"
 
-void PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth,int hz)
+bool PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth,int hz)
 {
   UNUSED_VAR(hz);
 
   if((width > MonitorWidth) || (height > MonitorHeight))
   {
-    ControlPane_Error(true,"Mode %dx%d too big",width,height);
+    ControlPane_Error(false,"Mode %dx%d too big",width,height);
+    return false;
   }
   HD.Width = width;
   HD.Height = height;
@@ -429,6 +433,8 @@ void PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth
     }
     GenExpandTable(HD.ExpandTable,1<<depth,HD.ExpandFactor,mul);
   }
+
+  return true;
 }
 
 /* Refresh the mouse's image */

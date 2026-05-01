@@ -44,7 +44,7 @@ static int palette_offset = 0;
 
 static uint32_t GetColour(ARMul_State *state,unsigned int col);
 static SDL_Color GetColourStruct(ARMul_State *state,unsigned int col);
-static void SetupScreen(ARMul_State *state,int *width,int *height,int bpp);
+static bool SetupScreen(ARMul_State *state,int *width,int *height,int bpp);
 static void PollDisplay(ARMul_State *state,int XScale,int YScale);
 
 /* ------------------------------------------------------------------ */
@@ -59,7 +59,7 @@ static void PollDisplay(ARMul_State *state,int XScale,int YScale);
 
 static SDD_HostColour SDD_Name(Host_GetColour)(ARMul_State *state,unsigned int col) { return GetColour(state, col); }
 
-static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz);
+static bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz);
 
 static inline SDD_Row SDD_Name(Host_BeginRow)(ARMul_State *state,int row,int offset)
 {
@@ -111,13 +111,14 @@ static void SDD_Name(Host_PollDisplay)(ARMul_State *state);
 
 #include "../arch/stddisplaydev.c"
 
-static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz)
+static bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz)
 {
   UNUSED_VAR(hz);
 
   if (width > MaxVideoWidth || height > MaxVideoHeight) {
-      ControlPane_Error(true,"Resize_Window: new size (%d, %d) exceeds maximum (%d, %d)",
+      ControlPane_Error(false,"Resize_Window: new size (%d, %d) exceeds maximum (%d, %d)",
           width, height, MaxVideoWidth, MaxVideoHeight);
+      return false;
   }
 
   HD.XScale = 1;
@@ -144,7 +145,7 @@ static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,in
   HD.Width = width;
   HD.Height = height;
 
-  SetupScreen(state,&HD.Width,&HD.Height,sizeof(SDD_HostColour)*8);
+  return SetupScreen(state,&HD.Width,&HD.Height,sizeof(SDD_HostColour)*8);
 }
 
 static void SDD_Name(Host_PollDisplay)(ARMul_State *state) {
@@ -172,7 +173,7 @@ static void SDD_Name(Host_PollDisplay)(ARMul_State *state) {
 
 static SDD_HostColour SDD_Name(Host_GetColour)(ARMul_State *state,unsigned int col) { return GetColour(state, col); }
 
-static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz);
+static bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz);
 
 static inline SDD_Row SDD_Name(Host_BeginRow)(ARMul_State *state,int row,int offset)
 {
@@ -224,13 +225,14 @@ static void SDD_Name(Host_PollDisplay)(ARMul_State *state);
 
 #include "../arch/stddisplaydev.c"
 
-static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz)
+static bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz)
 {
   UNUSED_VAR(hz);
 
   if (width > MaxVideoWidth || height > MaxVideoHeight) {
-      ControlPane_Error(true,"Resize_Window: new size (%d, %d) exceeds maximum (%d, %d)",
+      ControlPane_Error(false,"Resize_Window: new size (%d, %d) exceeds maximum (%d, %d)",
           width, height, MaxVideoWidth, MaxVideoHeight);
+      return false;
   }
 
   HD.XScale = 1;
@@ -257,7 +259,7 @@ static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,in
   HD.Width = width;
   HD.Height = height;
 
-  SetupScreen(state,&HD.Width,&HD.Height,sizeof(SDD_HostColour)*8);
+  return SetupScreen(state,&HD.Width,&HD.Height,sizeof(SDD_HostColour)*8);
 }
 
 static void SDD_Name(Host_PollDisplay)(ARMul_State *state) {
@@ -285,7 +287,7 @@ typedef struct {
   int offset;
 } PDD_Row;
 
-static void PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth,int hz);
+static bool PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth,int hz);
 
 static void PDD_Name(Host_SetPaletteEntry)(ARMul_State *state,int i,uint_fast16_t phys)
 {
@@ -381,13 +383,14 @@ static void PDD_Name(Host_DrawBorderRect)(ARMul_State *state,int x,int y,int wid
 
 #include "../arch/paldisplaydev.c"
 
-void PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth,int hz)
+bool PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth,int hz)
 {
   UNUSED_VAR(hz);
 
   if (width > MaxVideoWidth || height > MaxVideoHeight) {
-      ControlPane_Error(true,"Resize_Window: new size (%d, %d) exceeds maximum (%d, %d)",
+      ControlPane_Error(false,"Resize_Window: new size (%d, %d) exceeds maximum (%d, %d)",
           width, height, MaxVideoWidth, MaxVideoHeight);
+      return false;
   }
 
   HD.XScale = 1;
@@ -414,8 +417,6 @@ void PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth
   HD.Width = width;
   HD.Height = height;
 
-  SetupScreen(state,&HD.Width,&HD.Height,1<<depth);
-
   /* Calculate expansion params */
   if((depth == 3) && (HD.XScale == 1))
   {
@@ -439,6 +440,8 @@ void PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth
     }
     GenExpandTable(HD.ExpandTable,1<<depth,HD.ExpandFactor,mul);
   }
+
+  return SetupScreen(state,&HD.Width,&HD.Height,1<<depth);
 }
 
 static void PDD_Name(Host_PollDisplay)(ARMul_State *state) {
@@ -548,7 +551,7 @@ static bool RefreshMouse(ARMul_State *state,int XScale,int YScale) {
   return true;
 } /* RefreshMouse */
 
-static void SetupScreen(ARMul_State *state,int *width,int *height,int bpp)
+static bool SetupScreen(ARMul_State *state,int *width,int *height,int bpp)
 {
   UNUSED_VAR(state);
 
@@ -596,6 +599,8 @@ static void SetupScreen(ARMul_State *state,int *width,int *height,int bpp)
 
   *width = screen->w;
   *height = screen->h;
+
+  return true;
 }
 
 static void PollDisplay(ARMul_State *state,int XScale,int YScale)

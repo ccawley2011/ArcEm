@@ -43,7 +43,7 @@ static SDL_FRect mouse_rect;
 static int xscale = 1, yscale = 1;
 
 static uint32_t GetColour(ARMul_State *state,unsigned int col);
-static void SetupScreen(ARMul_State *state,int width,int height);
+static bool SetupScreen(ARMul_State *state,int width,int height);
 static void PollDisplay(ARMul_State *state);
 
 /* ------------------------------------------------------------------ */
@@ -58,7 +58,7 @@ static void PollDisplay(ARMul_State *state);
 
 static SDD_HostColour SDD_Name(Host_GetColour)(ARMul_State *state,unsigned int col) { return GetColour(state, col); }
 
-static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz);
+static bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz);
 
 static inline SDD_Row SDD_Name(Host_BeginRow)(ARMul_State *state,int row,int offset)
 {
@@ -110,13 +110,14 @@ static void SDD_Name(Host_PollDisplay)(ARMul_State *state) { PollDisplay(state);
 
 #include "../arch/stddisplaydev.c"
 
-static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz)
+static bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz)
 {
   UNUSED_VAR(hz);
 
   if (width > MaxVideoWidth || height > MaxVideoHeight) {
-    ControlPane_Error(true,"Resize_Window: new size (%d, %d) exceeds maximum (%d, %d)",
+    ControlPane_Error(false,"Resize_Window: new size (%d, %d) exceeds maximum (%d, %d)",
         width, height, MaxVideoWidth, MaxVideoHeight);
+    return false;
   }
 
   HD.XScale = 1;
@@ -124,7 +125,7 @@ static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,in
   HD.Width = width;
   HD.Height = height;
 
-  SetupScreen(state,width,height);
+  return SetupScreen(state,width,height);
 }
 
 #undef SDD_HostColour
@@ -143,7 +144,7 @@ static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,in
 
 static SDD_HostColour SDD_Name(Host_GetColour)(ARMul_State *state,unsigned int col) { return GetColour(state, col); }
 
-static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz);
+static bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz);
 
 static inline SDD_Row SDD_Name(Host_BeginRow)(ARMul_State *state,int row,int offset)
 {
@@ -195,13 +196,14 @@ static void SDD_Name(Host_PollDisplay)(ARMul_State *state) { PollDisplay(state);
 
 #include "../arch/stddisplaydev.c"
 
-static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz)
+static bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz)
 {
   UNUSED_VAR(hz);
 
   if (width > MaxVideoWidth || height > MaxVideoHeight) {
-    ControlPane_Error(true,"Resize_Window: new size (%d, %d) exceeds maximum (%d, %d)",
+    ControlPane_Error(false,"Resize_Window: new size (%d, %d) exceeds maximum (%d, %d)",
         width, height, MaxVideoWidth, MaxVideoHeight);
+    return false;
   }
 
   HD.XScale = 1;
@@ -209,7 +211,7 @@ static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,in
   HD.Width = width;
   HD.Height = height;
 
-  SetupScreen(state,width,height);
+  return SetupScreen(state,width,height);
 }
 
 #undef SDD_HostColour
@@ -312,7 +314,7 @@ static void RefreshMouse(ARMul_State *state) {
   mouse_texture = SDL_CreateTextureFromSurface(renderer, mouse_surface);
 } /* RefreshMouse */
 
-static void SetupScreen(ARMul_State *state,int width,int height)
+static bool SetupScreen(ARMul_State *state,int width,int height)
 {
   /* TODO: Use SDL_LockTexture() instead of creating a separate surface? */
   if (!sdd_surface)
@@ -359,6 +361,8 @@ static void SetupScreen(ARMul_State *state,int width,int height)
 #else
   SDL_RenderSetLogicalSize(renderer, width, height);
 #endif
+
+  return true;
 }
 
 static void PollDisplay(ARMul_State *state)

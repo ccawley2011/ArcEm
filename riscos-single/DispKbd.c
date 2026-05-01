@@ -160,7 +160,8 @@ static int ChangeMode(ARMul_State *state,const HostMode *mode,unsigned int depth
     err = _swix(OS_ScreenMode, _INR(0,1), 0, &block);
     if(err)
     {
-      ControlPane_Error(true,"Failed to change screen mode: Error %d %s",err->errnum,err->errmess);
+      ControlPane_Error(false,"Failed to change screen mode: Error %d %s",err->errnum,err->errmess);
+      return -1;
     }
   
     /* Remove text cursor from real RO */
@@ -215,7 +216,7 @@ static SDD_HostColour SDD_Name(Host_GetColour)(ARMul_State *state,unsigned int c
   return sdd_palette[col & ~0x1000];
 }  
 
-static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz);
+static bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz);
 
 static inline SDD_Row SDD_Name(Host_BeginRow)(ARMul_State *state,int row,int offset)
 {
@@ -268,7 +269,7 @@ SDD_Name(Host_PollDisplay)(ARMul_State *state);
 
 #include "../arch/stddisplaydev.c"
 
-static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz)
+static bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz)
 {
   HostMode *mode;
   int aspect;
@@ -284,7 +285,10 @@ static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,in
     aspect = 2;
 
   mode = SelectROScreenMode(state,width,height,aspect,1<<4,&HD.XScale,&HD.YScale);
-  ChangeMode(state,mode,4);
+  if (!mode)
+    return false;
+  if (ChangeMode(state,mode,4) < 0)
+    return false;
   HD.Width = ModeVarsOut[MODE_VAR_WIDTH]+1; /* Should match mode->w, mode->h, but use these just to make sure */
   HD.Height = ModeVarsOut[MODE_VAR_HEIGHT]+1;
   
@@ -292,6 +296,8 @@ static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,in
 
   /* Screen is expected to be cleared */
   _swi(OS_WriteC,_IN(0),12);
+
+  return true;
 }
 
 static void
@@ -328,7 +334,7 @@ static SDD_HostColour SDD_Name(Host_GetColour)(ARMul_State *state,unsigned int c
   return sdd_palette[col & ~0x1000];
 }  
 
-static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz);
+static bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz);
 
 static inline SDD_Row SDD_Name(Host_BeginRow)(ARMul_State *state,int row,int offset)
 {
@@ -381,7 +387,7 @@ SDD_Name(Host_PollDisplay)(ARMul_State *state);
 
 #include "../arch/stddisplaydev.c"
 
-static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz)
+static bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz)
 {
   HostMode *mode;
   int aspect;
@@ -397,7 +403,10 @@ static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,in
     aspect = 2;
 
   mode = SelectROScreenMode(state,width,height,aspect,1<<5,&HD.XScale,&HD.YScale);
-  ChangeMode(state,mode,5);
+  if (!mode)
+    return false;
+  if (ChangeMode(state,mode,5) < 0)
+    return false;
   HD.Width = ModeVarsOut[MODE_VAR_WIDTH]+1; /* Should match mode->w, mode->h, but use these just to make sure */
   HD.Height = ModeVarsOut[MODE_VAR_HEIGHT]+1;
   
@@ -405,6 +414,8 @@ static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,in
 
   /* Screen is expected to be cleared */
   _swi(OS_WriteC,_IN(0),12);
+
+  return true;
 }
 
 static void
@@ -438,7 +449,7 @@ typedef struct {
   int offset;
 } PDD_Row;
 
-static void PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth,int hz);
+static bool PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth,int hz);
 
 static void PDD_Name(Host_SetPaletteEntry)(ARMul_State *state,int i,uint_fast16_t phys)
 {
@@ -554,7 +565,7 @@ static void PDD_Name(Host_DrawBorderRect)(ARMul_State *state,int x,int y,int wid
 
 #include "../arch/paldisplaydev.c"
 
-void PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth,int hz)
+bool PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth,int hz)
 {
   HostMode *mode;
   int aspect, realdepth;
@@ -570,8 +581,12 @@ void PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth
     aspect = 2;
 
   mode = SelectROScreenMode(state,width,height,aspect,(0xf<<depth)&0xf,&HD.XScale,&HD.YScale);
+  if (!mode)
+    return false;
   realdepth = ChangeMode(state,mode,depth);
-  
+  if (realdepth < 0)
+    return false;
+
   HD.Width = ModeVarsOut[MODE_VAR_WIDTH]+1; /* Should match mode->w, mode->h, but use these just to make sure */
   HD.Height = ModeVarsOut[MODE_VAR_HEIGHT]+1;
   if(realdepth > depth)
@@ -617,6 +632,8 @@ void PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth
 
   /* Screen is expected to be cleared */
   PDD_Name(Host_DrawBorderRect)(state,0,0,HD.Width,HD.Height);
+
+  return true;
 }
 
 static void
@@ -1272,7 +1289,8 @@ static HostMode *SelectROScreenMode(ARMul_State *state,int x, int y, int aspect,
   }
   if(!bestmode)
   {
-    ControlPane_Error(true,"Failed to find suitable screen mode for %dx%d, aspect %.1f, depths %x",x,y,((float)aspect)/2.0f,depths);
+    ControlPane_Error(false,"Failed to find suitable screen mode for %dx%d, aspect %.1f, depths %x",x,y,((float)aspect)/2.0f,depths);
+    return false;
   }
   *outxscale = bestxscale;
   *outyscale = bestyscale;
@@ -1360,6 +1378,8 @@ static void GoMenu(ARMul_State *state)
       }
     }
   } while(1);
+  /* Clear the screen in case a future mode change fails */
+  _swi(OS_WriteC,_IN(0),12);
   /* (re)start display device. Even if we haven't changed anything, this is needed to force the screen to be redrawn (and the mode to be reset) */
   if(!DisplayDev_Set(state,displays[CONFIG.eDisplayDriver]))
   {

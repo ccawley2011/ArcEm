@@ -125,6 +125,7 @@ void state_free(void *p)
 
 static int changemode(int width,int height,int log2bpp,int *xscale,int *yscale)
 {
+	/* TODO: Return an error code on failure instead of exiting */
 	ULONG id = INVALID_ID;
 
 	warn_vidc("New display mode: %d x %d x %d ",width,height,1<<log2bpp);
@@ -273,7 +274,7 @@ static SDD_HostColour SDD_Name(Host_GetColour)(ARMul_State *state,unsigned int c
 	return (r<<10) | (g<<5) | (b);
 }  
 
-static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz);
+static bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz);
 
 static inline SDD_Row SDD_Name(Host_BeginRow)(ARMul_State *state,int row,int offset)
 {
@@ -314,12 +315,14 @@ void SDD_Name(Host_PollDisplay)(ARMul_State *state);
 
 #include "../arch/stddisplaydev.c"
 
-static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz)
+static bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int hz)
 {
 	int realdepth = changemode(width,height,4,&HD.XScale,&HD.YScale);
 
 	HD.Width = oldwidth;
 	HD.Height = oldheight;
+
+	return true;
 }
 
 /*-----------------------------------------------------------------------------*/
@@ -451,7 +454,7 @@ typedef struct {
 	int width; /* Width of area being updated */
 } PDD_Row;
 
-static void PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth,int hz);
+static bool PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth,int hz);
 
 static void PDD_Name(Host_SetPaletteEntry)(ARMul_State *state,int i,uint_fast16_t phys)
 {
@@ -547,7 +550,7 @@ static void PDD_Name(Host_DrawBorderRect)(ARMul_State *state,int x,int y,int wid
 
 #include "../arch/paldisplaydev.c"
 
-void PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth,int hz)
+bool PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth,int hz)
 {
 	int realdepth = changemode(width,height,depth,&HD.XScale,&HD.YScale);
 
@@ -593,6 +596,8 @@ void PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,int depth
 
 	/* Screen is expected to be cleared */
 	PDD_Name(Host_DrawBorderRect)(state,0,0,HD.Width,HD.Height);
+
+	return true;
 }
 
 /*-----------------------------------------------------------------------------*/

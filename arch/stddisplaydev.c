@@ -40,16 +40,16 @@
     - A function that the driver will call in order to convert a 13-bit VIDC
       physical colour into a host colour.
 
-   void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,
+   bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,
                                   int hz)
     - A function that the driver will call whenever the display timings have
       changed enough to warrant a mode change.
     - The implementation must change to the most appropriate display mode
       available and fill in the Width, Height, XScale and YScale members of the
       HostDisplay struct to reflect the new display parameters.
-    - Currently, failure to find a suitable mode isn't supported - however it
-      shouldn't be too hard to keep the screen blanked (not ideal) by keeping
-      DC.ModeChanged set to 1
+    - If the driver fails to find a suitable mode, false should be returned,
+      and screen updates will be disabled until the next successful mode change.
+      Host_PollDisplay will still be called during this time.
 
    SDD_RowsAtOnce
     - The number of source rows to process per update. This can be a non-const
@@ -192,6 +192,7 @@ struct SDD_Name(DisplayInfo) {
 
     uint_least16_t DirtyPalette; /* Bit flags of which palette entries have been modified */
     bool ModeChanged; /* Set if any registers change which may require the host to change mode. Remains set until valid mode is available from host (suspends all display output) */
+    bool ModeSupported; /* Set if the current mode is supported by the host. */
 
     /* Values that must only get updated by the event queue/screen blit code */
     
@@ -2021,7 +2022,7 @@ static void SDD_Name(FrameStart)(ARMul_State *state,CycleCount nowtime)
       DC.LastHostWidth = Width;
       DC.LastHostHeight = Height;
       DC.LastHostHz = FrameRate;
-      SDD_Name(Host_ChangeMode)(state,Width,Height,FrameRate);
+      DC.ModeSupported = SDD_Name(Host_ChangeMode)(state,Width,Height,FrameRate);
 
       /* Calculate display offsets, for start of first display pixel */
       HD.XOffset = (HD.Width-Width*HD.XScale)/2;
@@ -2147,25 +2148,34 @@ static void SDD_Name(RowStart)(ARMul_State *state,CycleCount nowtime)
     if(row < (VIDC.Vert_DisplayStart+1))
     {
       /* Border region */
-      SDD_Name(BorderRow)(state,row);
+      if (DC.ModeSupported)
+      {
+        SDD_Name(BorderRow)(state,row);
+      }
     }
     else if(dmaen && (row < (VIDC.Vert_DisplayEnd+1)))
     {
       /* Display */
-      if(DisplayDev_UseUpdateFlags)
+      if (DC.ModeSupported)
       {
-        SDD_Name(DisplayRow)(state,row);
-      }
-      else
-      {
-        SDD_Name(DisplayRowNoFlags)(state,row);
+        if(DisplayDev_UseUpdateFlags)
+        {
+          SDD_Name(DisplayRow)(state,row);
+        }
+        else
+        {
+          SDD_Name(DisplayRowNoFlags)(state,row);
+        }
       }
     }
     else if(row < (VIDC.Vert_BorderEnd+1))
     {
       /* Border again */
       flybk = true;
-      SDD_Name(BorderRow)(state,row);
+      if (DC.ModeSupported)
+      {
+        SDD_Name(BorderRow)(state,row);
+      }
     }
     else
     {
@@ -2392,6 +2402,7 @@ static bool SDD_Name(Init)(ARMul_State *state,const struct Vidc_Regs *Vidc)
   VIDC = *Vidc;
 
   DC.ModeChanged = true;
+  DC.ModeSupported = false;
   DC.LastHostWidth = DC.LastHostHeight = DC.LastHostHz = -1;
   DC.DirtyPalette = 65535;
   DC.NextRow = 0;

@@ -51,7 +51,7 @@ static void SDD_Name(RefreshMouse)(ARMul_State *state);
 
 static void SDD_Name(Host_PollDisplay)(ARMul_State *state);
 
-static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,
+static bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,
                                       int hz);
 
 static SDD_HostColour SDD_Name(Host_GetColour)(ARMul_State *state,uint_fast16_t col)
@@ -128,7 +128,7 @@ static void SDD_Name(Host_EndUpdate)(ARMul_State *state,SDD_Row *row)
 
 #include "../arch/stddisplaydev.c"
 
-static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,
+static bool SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,
                                       int hz)
 {
   UNUSED_VAR(hz);
@@ -140,6 +140,8 @@ static void SDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,
   dispatch_sync(dispatch_get_main_queue(), ^{
     resizeWindow(HD.Width,HD.Height);
   });
+
+  return true;
 }
 
 /* Refresh the mouse's image */

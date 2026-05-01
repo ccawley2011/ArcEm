@@ -47,7 +47,7 @@
    void PDD_Name(Host_PollDisplay)(ARMul_State *state)
     - Function that gets called after rendering each frame
 
-   void PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,
+   bool PDD_Name(Host_ChangeMode)(ARMul_State *state,int width,int height,
                                   int depth,int hz)
     - Function that gets called when the display mode needs changing.
     - 'Depth' is the log2 of the BPP
@@ -56,9 +56,9 @@
       HostDisplay struct to reflect the new display parameters.
     - It must also fill in ExpandTable & ExpandFactor if BPP conversion or
       horizontal upscaling is required
-    - Currently, failure to find a suitable mode isn't supported - however it
-      shouldn't be too hard to keep the screen blanked (not ideal) by keeping
-      DC.ModeChanged set to 1
+    - If the driver fails to find a suitable mode, false should be returned,
+      and screen updates will be disabled until the next successful mode change.
+      Host_PollDisplay will still be called during this time.
 
    void PDD_Name(Host_SetPaletteEntry)(ARMul_State *state,int i,
                                        uint_fast16_t phys)
@@ -140,6 +140,7 @@ struct PDD_Name(DisplayInfo) {
 
     uint32_t DirtyPalette; /* Bit flags of which palette entries have been modified */
     bool ModeChanged; /* Set if any registers change which may require the host to change mode. Remains set until valid mode is available from host (suspends all display output) */
+    bool ModeSupported; /* Set if the current mode is supported by the host. */
     bool ForceRefresh; /* Set if the entire screen needs redrawing */
 
     /* Values that must only get updated by the event queue/screen blit code */
@@ -665,7 +666,7 @@ static void PDD_Name(EventFunc)(ARMul_State *state,CycleCount nowtime)
       DC.LastHostHeight = Height;
       DC.LastHostHz = FrameRate;
       DC.LastHostDepth = Depth;
-      PDD_Name(Host_ChangeMode)(state,Width,Height,Depth,FrameRate);
+      DC.ModeSupported = PDD_Name(Host_ChangeMode)(state,Width,Height,Depth,FrameRate);
 
       /* Calculate display offsets, for start of first display pixel */
       HD.XOffset = (HD.Width-Width*HD.XScale)/2;
@@ -726,6 +727,13 @@ static void PDD_Name(EventFunc)(ARMul_State *state,CycleCount nowtime)
         DC.Auto_ForceRefresh = 0;
       }
     }
+  }
+
+  if(!DC.ModeSupported)
+  {
+    /* Skip rendering */
+    PDD_Name(Host_PollDisplay)(state);
+    return;
   }
 
   /* Update host palette */
@@ -1029,6 +1037,7 @@ static bool PDD_Name(Init)(ARMul_State *state,const struct Vidc_Regs *Vidc)
   VIDC = *Vidc;
 
   DC.ModeChanged = true;
+  DC.ModeSupported = false;
   DC.LastHostWidth = DC.LastHostHeight = DC.LastHostHz = DC.LastHostDepth = -1;
   DC.DirtyPalette = 65535;
   DC.VIDC_CR = 0;
