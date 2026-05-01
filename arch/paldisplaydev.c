@@ -474,6 +474,93 @@ static inline void PDD_Name(RowFuncExpandTableNoFlags)(ARMul_State *state,PDD_Ro
 }
 
 
+static void PDD_Name(FrameFunc)(ARMul_State *state,int Height,int flags)
+{
+  int i;
+
+  for(i=0;i<Height;i++)
+  {
+    int hoststart = i*HD.YScale+HD.YOffset;
+    int hostend = hoststart+HD.YScale;
+    ARMword Vptr = DC.Vptr;
+    if(hoststart < 0)
+      hoststart = 0;
+    if(hostend > HD.Height)
+      hostend = HD.Height;
+    while(hoststart < hostend)
+    {
+      int alignment;
+      int updated;
+      PDD_Row hrow;
+      DC.Vptr = Vptr;
+      hrow = PDD_Name(Host_BeginRow)(state,hoststart++,HD.XOffset,&alignment);
+      if(HD.ExpandTable)
+      {
+        updated = PDD_Name(RowFuncExpandTable)(state,hrow,flags);
+      }
+      else if(!(flags & ROWFUNC_UNALIGNED) && !(alignment & 0x7))
+      {
+        updated = PDD_Name(RowFunc1XSameByteAligned)(state,hrow,flags);
+      }
+      else
+      {
+        updated = PDD_Name(RowFunc1XSameBitAligned)(state,hrow,flags);
+      }
+      PDD_Name(Host_EndRow)(state,&hrow);
+      if(updated)
+        flags |= ROWFUNC_UPDATED;
+      else
+        break;
+    }
+  }
+
+  /* Update UpdateFlags */
+  if(flags & ROWFUNC_UPDATED)
+  {
+    /* Only need to update between MIN(Vinit,Vstart) and Vend */
+    uint_fast16_t start = MIN(MEMC.Vinit,MEMC.Vstart)/(UPDATEBLOCKSIZE/16);
+    uint_fast16_t end = (MEMC.Vend/(UPDATEBLOCKSIZE/16))+1;
+    memcpy(HD.UpdateFlags+start,MEMC.UpdateFlags+start,(end-start)*sizeof(uint32_t));
+  }
+}
+
+static void PDD_Name(FrameFuncNoFlags)(ARMul_State *state,int Height,int flags)
+{
+  int i;
+
+  for(i=0;i<Height;i++)
+  {
+    int hoststart = i*HD.YScale+HD.YOffset;
+    int hostend = hoststart+HD.YScale;
+    ARMword Vptr = DC.Vptr;
+    if(hoststart < 0)
+      hoststart = 0;
+    if(hostend > HD.Height)
+      hostend = HD.Height;
+    while(hoststart < hostend)
+    {
+      int alignment;
+      PDD_Row hrow;
+      DC.Vptr = Vptr;
+      hrow = PDD_Name(Host_BeginRow)(state,hoststart++,HD.XOffset,&alignment);
+      if(HD.ExpandTable)
+      {
+        PDD_Name(RowFuncExpandTableNoFlags)(state,hrow);
+      }
+      else if(!(flags & ROWFUNC_UNALIGNED) && !(alignment & 0x7))
+      {
+        PDD_Name(RowFunc1XSameByteAlignedNoFlags)(state,hrow);
+      }
+      else
+      {
+        PDD_Name(RowFunc1XSameBitAlignedNoFlags)(state,hrow);
+      }
+      PDD_Name(Host_EndRow)(state,&hrow);
+    }
+  }
+}
+
+
 /*
 
   EventQ funcs
@@ -702,7 +789,6 @@ static void PDD_Name(EventFunc)(ARMul_State *state,CycleCount nowtime)
   /* Render */
   if(newDMAEn)
   {
-    int i;
     int flags = (DC.ForceRefresh?ROWFUNC_FORCE:0);
 
     /* We can test these values once here, so that it's only output alignment
@@ -712,50 +798,7 @@ static void PDD_Name(EventFunc)(ARMul_State *state,CycleCount nowtime)
 
     if(DisplayDev_UseUpdateFlags)
     {
-      for(i=0;i<Height;i++)
-      {
-        int hoststart = i*HD.YScale+HD.YOffset;
-        int hostend = hoststart+HD.YScale;
-        ARMword Vptr = DC.Vptr;
-        if(hoststart < 0)
-          hoststart = 0;
-        if(hostend > HD.Height)
-          hostend = HD.Height;
-        while(hoststart < hostend)
-        {
-          int alignment;
-          int updated;
-          PDD_Row hrow;
-          DC.Vptr = Vptr;
-          hrow = PDD_Name(Host_BeginRow)(state,hoststart++,HD.XOffset,&alignment);
-          if(HD.ExpandTable)
-          {
-            updated = PDD_Name(RowFuncExpandTable)(state,hrow,flags);
-          }
-          else if(!(flags & ROWFUNC_UNALIGNED) && !(alignment & 0x7))
-          {
-            updated = PDD_Name(RowFunc1XSameByteAligned)(state,hrow,flags);
-          }
-          else
-          {
-            updated = PDD_Name(RowFunc1XSameBitAligned)(state,hrow,flags);
-          }
-          PDD_Name(Host_EndRow)(state,&hrow);
-          if(updated)
-            flags |= ROWFUNC_UPDATED;
-          else
-            break;
-        }
-      }
-    
-      /* Update UpdateFlags */
-      if(flags & ROWFUNC_UPDATED)
-      {
-        /* Only need to update between MIN(Vinit,Vstart) and Vend */
-        uint_fast16_t start = MIN(MEMC.Vinit,MEMC.Vstart)/(UPDATEBLOCKSIZE/16);
-        uint_fast16_t end = (MEMC.Vend/(UPDATEBLOCKSIZE/16))+1;
-        memcpy(HD.UpdateFlags+start,MEMC.UpdateFlags+start,(end-start)*sizeof(uint32_t));
-      }
+      PDD_Name(FrameFunc)(state,Height,flags);
     }
     else
     {
@@ -764,36 +807,7 @@ static void PDD_Name(EventFunc)(ARMul_State *state,CycleCount nowtime)
       {
         DC.FrameSkip = DisplayDev_FrameSkip;
 
-        for(i=0;i<Height;i++)
-        {
-          int hoststart = i*HD.YScale+HD.YOffset;
-          int hostend = hoststart+HD.YScale;
-          ARMword Vptr = DC.Vptr;
-          if(hoststart < 0)
-            hoststart = 0;
-          if(hostend > HD.Height)
-            hostend = HD.Height;
-          while(hoststart < hostend)
-          {
-            int alignment;
-            PDD_Row hrow;
-            DC.Vptr = Vptr;
-            hrow = PDD_Name(Host_BeginRow)(state,hoststart++,HD.XOffset,&alignment);
-            if(HD.ExpandTable)
-            {
-              PDD_Name(RowFuncExpandTableNoFlags)(state,hrow);
-            }
-            else if(!(flags & ROWFUNC_UNALIGNED) && !(alignment & 0x7))
-            {
-              PDD_Name(RowFunc1XSameByteAlignedNoFlags)(state,hrow);
-            }
-            else
-            {
-              PDD_Name(RowFunc1XSameBitAlignedNoFlags)(state,hrow);
-            }
-            PDD_Name(Host_EndRow)(state,&hrow);
-          }
-        }
+        PDD_Name(FrameFuncNoFlags)(state,Height,flags);
       }
       else
       {
