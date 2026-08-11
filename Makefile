@@ -186,14 +186,34 @@ riscpkg: $(TARGET)
 	mkdir ArcEm/Apps/Misc/hostfs
 endif
 
-ifeq (${SYSTEM},SDL)
+ifeq (${SYSTEM},SDL3)
+override SYSTEM := SDL
+CPPFLAGS += -DSYSTEM_SDL3
+CFLAGS += $(shell $(PKG_CONFIG) --cflags sdl3)
+LIBS += $(shell $(PKG_CONFIG) --libs sdl3)
+endif
+
+ifeq (${SYSTEM},SDL2)
+override SYSTEM := SDL
 SDL_CONFIG=sdl2-config
+CPPFLAGS += -DSYSTEM_SDL2
+CFLAGS += $(shell $(SDL_CONFIG) --cflags)
+LIBS += $(shell $(SDL_CONFIG) --libs)
+endif
+
+ifeq (${SYSTEM},SDL1)
+override SYSTEM := SDL
+SDL_CONFIG=sdl-config
+CPPFLAGS += -DSYSTEM_SDL1
+CFLAGS += $(shell $(SDL_CONFIG) --cflags)
+LIBS += $(shell $(SDL_CONFIG) --libs)
+endif
+
+ifeq (${SYSTEM},SDL)
 CPPFLAGS += -DSYSTEM_SDL
 ifneq ($(shell uname),Darwin)
 CPPFLAGS += -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
 endif
-CFLAGS += $(shell $(SDL_CONFIG) --cflags)
-LIBS += $(shell $(SDL_CONFIG) --libs)
 OBJS += SDL/fb.o SDL/render.o SDL/sound.o
 SOUND_SUPPORT=yes
 SOUND_PTHREAD=no
