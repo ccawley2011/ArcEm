@@ -36,9 +36,7 @@ static const ARMul_CoPro DummyCoPro = {
   ARMul_NoCoPro4W, /* STC */
   ARMul_NoCoPro4W, /* MRC */
   ARMul_NoCoPro4R, /* MCR */
-  ARMul_NoCoPro3R, /* CDP */
-  NULL,            /* CPRead */
-  NULL             /* CPWrite */
+  ARMul_NoCoPro3R  /* CDP */
 };
 
 /***************************************************************************\

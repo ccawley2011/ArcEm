@@ -204,9 +204,7 @@ static const ARMul_CoPro ARM3CoPro = {
   ARMul_NoCoPro4W,    /* STC */
   ARM3_MRCs,          /* MRC */
   ARM3_MCRs,          /* MCR */
-  ARMul_NoCoPro3R,    /* CDP */
-  ARM3_RegisterRead,  /* CPRead */
-  ARM3_RegisterWrite  /* CPWrite */
+  ARMul_NoCoPro3R     /* CDP */
 };
 
 /**

@@ -34,8 +34,6 @@ typedef unsigned ARMul_STCs(ARMul_State *state, unsigned type, ARMword instr, AR
 typedef unsigned ARMul_MRCs(ARMul_State *state, unsigned type, ARMword instr, ARMword *value);
 typedef unsigned ARMul_MCRs(ARMul_State *state, unsigned type, ARMword instr, ARMword value);
 typedef unsigned ARMul_CDPs(ARMul_State *state, unsigned type, ARMword instr);
-typedef bool ARMul_CPReads(ARMul_State *state, unsigned reg, ARMword *value);
-typedef bool ARMul_CPWrites(ARMul_State *state, unsigned reg, ARMword value);
 
 struct ARMul_CoPro {
    ARMul_CPInits *CPInit;   /* coprocessor initialisers */
@@ -45,8 +43,6 @@ struct ARMul_CoPro {
    ARMul_MRCs *MRC;         /* MRC instruction */
    ARMul_MCRs *MCR;         /* MCR instruction */
    ARMul_CDPs *CDP;         /* CDP instruction */
-   ARMul_CPReads *CPRead;   /* Read CP register */
-   ARMul_CPWrites *CPWrite; /* Write CP register */
  };
 
 #define ARMul_FIRST 0
