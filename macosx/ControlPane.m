@@ -23,23 +23,23 @@ bool ControlPane_Init(ARMul_State *state)
 
 void ControlPane_Error(bool fatal,const char *fmt,...)
 {
-  const size_t errlen = 100;
-  char *err = malloc(errlen);
   va_list args;
+  NSString *s;
 
-  /* Log it */
   va_start(args,fmt);
-  vsnprintf(err,errlen,fmt,args);
+  s = [[NSString alloc] initWithFormat:@(fmt)
+                        arguments:args];
   va_end(args);
 
-  log_msg(LOG_ERROR,"%s\n",err);
+  /* Log it */
+  NSLog(@"%@", s);
+
   dispatch_sync(dispatch_get_main_queue(), ^{
       NSAlert *alert = [[NSAlert alloc] init];
       alert.alertStyle = NSAlertStyleCritical;
       alert.messageText = @"ArcEm";
-      alert.informativeText = @(err);
+      alert.informativeText = s;
       [alert runModal];
-      free(err);
   });
 
   /* Quit */
@@ -49,8 +49,6 @@ void ControlPane_Error(bool fatal,const char *fmt,...)
 
 void log_msgv(int type, const char *format, va_list ap)
 {
-  if (type >= LOG_WARN)
-    vfprintf(stderr, format, ap);
-  else
-    vfprintf(stdout, format, ap);
+  UNUSED_VAR(type);
+  NSLogv(@(format), ap);
 }
