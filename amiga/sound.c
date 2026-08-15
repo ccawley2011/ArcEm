@@ -26,7 +26,7 @@ static bool openaudio(void)
 {
 	char audiof[256];
 
-	sprintf(audiof, "AUDIO:BITS/16/C/2/F/%lu/T/SIGNED", sampleRate);
+	snprintf(audiof, 256, "AUDIO:BITS/16/C/2/F/%lu/T/SIGNED", sampleRate);
 
 	if(!(audioh = Open(audiof,MODE_NEWFILE)))
 	{

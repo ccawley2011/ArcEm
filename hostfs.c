@@ -776,7 +776,7 @@ hostfs_path_scan(const char *host_dir_path,
 
   /* This is nice and easy */
 
-  sprintf(path,"%s.%s",host_dir_path,object);
+  snprintf(path,PATH_MAX,"%s.%s",host_dir_path,object);
 
   hostfs_read_object_info(path,NULL,object_info);
 

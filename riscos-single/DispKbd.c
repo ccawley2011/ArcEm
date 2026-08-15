@@ -882,7 +882,7 @@ static void Host_PollDisplay_Common(ARMul_State *state,const DisplayParams *para
     char name[32];
     static int count = 0;
     do_screenshot = 0;
-    sprintf(name,"<ArcEm$Dir>.^.screen%04d",count++);
+    snprintf(name,32,"<ArcEm$Dir>.^.screen%04d",count++);
     if(CONFIG.bRedBlueSwap && (ModeVarsOut[MODE_VAR_LOG2BPP] == 4))
     {
       /* Unswap red/blue so the sprite is correct */
