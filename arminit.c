@@ -143,7 +143,7 @@ ARMul_State *ARMul_NewState(ArcemConfig *pConfig)
  ARMul_Reset(state);
  if (!ARMul_MemoryInit(state)) {
     ARMul_FreeState(state);
-    return false;
+    return NULL;
  }
 #ifdef ARMUL_COPRO_SUPPORT
  if (!ARMul_CoProInit(state)) {
