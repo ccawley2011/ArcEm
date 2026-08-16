@@ -389,6 +389,11 @@ static Uint32 ExaminePixelFormat(Uint32 fmt, Uint32 last)
       !SDL_ISPIXELFORMAT_PACKED(fmt))
     return last;
 
+  /* Prefer 4444 pixel formats where possible */
+  if (SDL_PIXELLAYOUT(fmt) == SDL_PACKEDLAYOUT_4444 &&
+      SDL_PIXELLAYOUT(last) != SDL_PACKEDLAYOUT_4444)
+    return fmt;
+
   /* Prefer 16-bit pixel formats where possible */
   if (SDL_BYTESPERPIXEL(fmt) >= SDL_BYTESPERPIXEL(last) &&
       last != SDL_PIXELFORMAT_UNKNOWN)
