@@ -19,6 +19,12 @@
 
 #include "KeyTable.h"
 
+#if SDL_VERSION_ATLEAST(3, 0, 0)
+#include <SDL3/SDL_main.h>
+#else
+#include <SDL_main.h>
+#endif
+
 #if SDL_VERSION_ATLEAST(2, 0, 0)
 SDL_Window *window = NULL;
 #endif
