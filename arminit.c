@@ -320,5 +320,7 @@ void ARMul_Abort(ARMul_State *state, ARMword vector) {
        break;
   }
 
-  ARMul_SetR15(state,R15CCINTMODE | vector);
+  state->Reg[15] = R15CCINTMODE | vector;
+  ARMul_R15Altered(state);
+ FLUSHPIPE;
 }

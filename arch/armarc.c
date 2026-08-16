@@ -58,7 +58,6 @@ static void DumpHandler(int sig) {
 
   UNUSED_VAR(sig);
 
-  warn("SIGUSR2 at PC=0x%"PRIx32"\n",ARMul_GetPC(state));
   signal(SIGUSR2,DumpHandler);
   /* Register dump */
   warn("Current registers:\n"

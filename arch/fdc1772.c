@@ -787,7 +787,7 @@ static void FDC_NewCommand(ARMul_State *state, uint_fast8_t data)
     FDC.LastCommand=data;
     FDC_WriteCommand(state);
   } else if (IS_CMD(data, READ_ADDR)) {
-    DBG(("FDC_NewCommand: Read address data=0x%x (PC=0x%"PRIx32")\n",data,ARMul_GetPC(state)));
+    DBG(("FDC_NewCommand: Read address data=0x%x\n",data));
     FDC.LastCommand=data;
     FDC_ReadAddressCommand(state);
   } else if (IS_CMD(data, READ_TRACK)) {

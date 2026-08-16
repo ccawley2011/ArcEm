@@ -31,82 +31,6 @@ static inline ARMword ModeToBank(ARMword mode) {
 }
 
 /***************************************************************************\
-* This routine sets the value of a register for a mode.                     *
-\***************************************************************************/
-
-void ARMul_SetReg(ARMul_State *state, unsigned mode, unsigned reg, ARMword value)
-{mode &= R15MODEBITS;
- if (mode != R15MODE)
-    state->RegBank[ModeToBank((ARMword)mode)][reg] = value;
- else
-    state->Reg[reg] = value;
-}
-
-/***************************************************************************\
-* This routine returns the value of the PC, mode independently.             *
-\***************************************************************************/
-
-ARMword ARMul_GetPC(ARMul_State *state)
-{
-    return(R15PC);
-}
-
-/***************************************************************************\
-* This routine returns the value of the PC, mode independently.             *
-\***************************************************************************/
-
-ARMword ARMul_GetNextPC(ARMul_State *state)
-{
-    return((state->Reg[15] + 4) & R15PCBITS);
-}
-
-/***************************************************************************\
-* This routine sets the value of the PC.                                    *
-\***************************************************************************/
-
-void ARMul_SetPC(ARMul_State *state, ARMword value)
-{
-  state->Reg[15] = R15CCINTMODE | (value & R15PCBITS);
- FLUSHPIPE;
-}
-
-/***************************************************************************\
-* This routine returns the value of register 15, mode independently.        *
-\***************************************************************************/
-
-ARMword ARMul_GetR15(ARMul_State *state)
-{
-    return state->Reg[15];
-}
-
-/***************************************************************************\
-* This routine sets the value of Register 15.                               *
-\***************************************************************************/
-
-void ARMul_SetR15(ARMul_State *state, ARMword value)
-{
-  state->Reg[15] = value;
-  ARMul_R15Altered(state);
- FLUSHPIPE;
-}
-
-/***************************************************************************\
-* This routine updates the state of the emulator after register 15 has      *
-* been changed.  Both the processor flags and register bank are updated.    *
-* This routine should only be called from a 26 bit mode.                    *
-\***************************************************************************/
-
-void ARMul_R15Altered(ARMul_State *state)
-{
- register ARMword mode = R15MODE;
- if (state->Bank != mode) {
-    ARMul_SwitchMode(state,state->Bank,mode);
-    state->NtransSig = (mode)?HIGH:LOW;
-    FastMap_RebuildMapMode(state);
-    }
-}
-
-/***************************************************************************\
 * This routine controls the saving and restoring of registers across mode   *
 * changes.  The regbank matrix is largely unused, only rows 13 and 14 are   *
 * used across all modes, 8 to 14 are used for FIQ, all others use the USER  *
@@ -149,18 +73,6 @@ ARMword ARMul_SwitchMode(ARMul_State *state,ARMword oldmode, ARMword newmode)
        } /* switch */
     } /* if */
     return(newmode);
-}
-
-/***************************************************************************\
-* Returns the register number of the nth register in a reg list.            *
-\***************************************************************************/
-
-unsigned ARMul_NthReg(ARMword instr, unsigned number)
-{unsigned bit, upto;
-
- for (bit = 0, upto = 0; upto <= number; bit++)
-    if (BIT(bit)) upto++;
- return(bit - 1);
 }
 
 #ifndef FASTMAP_INLINE

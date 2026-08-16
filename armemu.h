@@ -57,6 +57,7 @@
 #endif
 
 #include "c99.h"
+#include "arch/fastmap.h"
 #include <stdlib.h>
 
 /***************************************************************************\
@@ -360,11 +361,23 @@ extern uint_least8_t ARMul_BitList[];       /* Number of bits in a byte table */
 extern uint_least16_t ARMul_CCTable[16];
 #define ARMul_CCCheck(instr,psr) (ARMul_CCTable[instr>>28] & (1<<(psr>>28)))
 
-unsigned ARMul_NthReg(ARMword instr,unsigned number);
-void ARMul_R15Altered(ARMul_State *state);
 ARMword ARMul_SwitchMode(ARMul_State *state,ARMword oldmode, ARMword newmode);
-unsigned ARMul_NthReg(ARMword instr, unsigned number);
 
+/***************************************************************************\
+* This routine updates the state of the emulator after register 15 has      *
+* been changed.  Both the processor flags and register bank are updated.    *
+* This routine should only be called from a 26 bit mode.                    *
+\***************************************************************************/
+
+static inline void ARMul_R15Altered(ARMul_State *state)
+{
+ register ARMword mode = R15MODE;
+ if (state->Bank != mode) {
+    ARMul_SwitchMode(state,state->Bank,mode);
+    state->NtransSig = (mode)?HIGH:LOW;
+    FastMap_RebuildMapMode(state);
+    }
+}
 
 /***************************************************************************\
 *                      Macros to scrutinise instructions                    *

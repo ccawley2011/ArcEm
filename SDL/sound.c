@@ -9,7 +9,6 @@
 #include "../arch/ControlPane.h"
 #include "../arch/dbugsys.h"
 #include "../arch/displaydev.h"
-#include "../armemu.h"
 #include "platform.h"
 
 /* #define SOUND_LOGGING */

@@ -292,17 +292,6 @@ int ARMul_DoProg(ARMul_State *state);
 #define ARMul_Time (state->NumCycles)
 
 /***************************************************************************\
-*                          Useful support routines                          *
-\***************************************************************************/
-
-void ARMul_SetReg(ARMul_State *state, unsigned mode, unsigned reg, ARMword value);
-ARMword ARMul_GetPC(ARMul_State *state);
-ARMword ARMul_GetNextPC(ARMul_State *state);
-void ARMul_SetPC(ARMul_State *state, ARMword value);
-ARMword ARMul_GetR15(ARMul_State *state);
-void ARMul_SetR15(ARMul_State *state, ARMword value);
-
-/***************************************************************************\
 *                  Definitons of things to handle aborts                    *
 \***************************************************************************/
 
