@@ -19,7 +19,7 @@ jobs:
         - { system: SDL3, apt-packages: libinih-dev }
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
     - name: Install dependencies
       if: ${{ matrix.linux.apt-packages != '' }}
       run: sudo apt-get update && sudo apt-get install ${{ matrix.linux.apt-packages }}
@@ -33,7 +33,7 @@ jobs:
       run: cmake -B build/ -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DSYSTEM=${{ matrix.linux.system }} -DUSE_SYSTEM_INIH=ON ${{ matrix.linux.cmake-flags }} .
     - name: Build
       run: cmake --build build/ --config ${{env.BUILD_TYPE}} --parallel
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: arcem-linux-${{ matrix.linux.system }}
         path: ./build/arcem
@@ -52,7 +52,7 @@ jobs:
         - { system: SDL3,   brew-packages: sdl3         }
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
     - name: Install dependencies
       if: ${{ matrix.macosx.brew-packages != '' }}
       run: brew install ${{ matrix.macosx.brew-packages }}
@@ -62,7 +62,7 @@ jobs:
       run: cmake --build build/ --config ${{env.BUILD_TYPE}} --parallel
     - name: Package
       run: cmake --build build/ --config ${{env.BUILD_TYPE}} --target package
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: arcem-macosx-${{ matrix.macosx.system }}
         path: ./build/ArcEm-*.dmg
@@ -79,14 +79,14 @@ jobs:
         - { platform: ARM64 }
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
     - name: Configure
       run: cmake -B build/ -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -A ${{ matrix.msvc.platform }} .
     - name: Build
       run: cmake --build build/ --config ${{env.BUILD_TYPE}} --parallel
     - name: Package
       run: cmake --build build/ --config ${{env.BUILD_TYPE}} --target package
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: arcem-msvc-${{ matrix.msvc.platform }}
         path: build/ArcEm-*.zip
@@ -112,14 +112,14 @@ jobs:
       with:
         msystem: ${{ matrix.mingw.msystem }}
         install: ${{ matrix.mingw.msys-env }}-cc ${{ matrix.mingw.msys-env }}-cmake
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
     - name: Configure
       run: cmake -B build/ -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} .
     - name: Build
       run: cmake --build build/ --config ${{env.BUILD_TYPE}} --parallel
     - name: Package
       run: cmake --build build/ --config ${{env.BUILD_TYPE}} --target package
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: arcem-${{ matrix.mingw.msystem }}
         path: ./build/ArcEm-*.zip
@@ -130,13 +130,13 @@ jobs:
 
     steps:
     - name: Set up OpenWatcom
-      uses: open-watcom/setup-watcom@v0
+      uses: open-watcom/setup-watcom@v1
       with:
         tag: 2021-12-01-Build
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
     - name: Build
       run: wmake -f Makefile.ow
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: arcem-watcom
         path: ./ArcEm.exe
@@ -147,10 +147,10 @@ jobs:
     container: riscosdotinfo/riscos-gccsdk-4.7:latest
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
     - name: Build
       run: make SYSTEM=riscos-single CROSS=arm-unknown-riscos-
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: arcem-riscos
         path: ./ArcEm
@@ -167,10 +167,10 @@ jobs:
         - { name: "AmigaOS 4", host: "ppc-amigaos", system: "amiga" }
 
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v7
     - name: Build
       run: make SYSTEM=${{ matrix.amiga.system }} CROSS=${{ matrix.amiga.host }}-
-    - uses: actions/upload-artifact@v4
+    - uses: actions/upload-artifact@v7
       with:
         name: arcem-${{ matrix.amiga.host }}
         path: ./arcem
