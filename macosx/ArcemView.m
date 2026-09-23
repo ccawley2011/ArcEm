@@ -45,7 +45,7 @@
 
         modState = 0;
 
-        // Set the default display region
+        /* Set the default display region */
         dispFrame.origin.x = 0.0;
         dispFrame.origin.y = 0.0;
         dispFrame.size.width = 640;
@@ -56,7 +56,7 @@
         nXScale = nYScale = 1;
         bAspect = bUpscale = YES;
 
-        // Note: we can't geet prefs yet as the controller init hasn't finished yet
+        /* Note: we can't geet prefs yet as the controller init hasn't finished yet */
     }
 
     return self;
@@ -93,12 +93,12 @@
     CGBitmapInfo cgBitmapInfo = kCGImageAlphaNoneSkipFirst | kCGImageByteOrderDefault | kCGImagePixelFormatPacked;
     CGColorSpaceRef cgColorspace = CGColorSpaceCreateDeviceRGB();
 
-    // Recreate the screen image
+    /* Recreate the screen image */
     if (screenImage)
         CGContextRelease(screenImage);
     screenImage = CGBitmapContextCreate(NULL, nWidth, nHeight, 8, nWidth * 4, cgColorspace, cgBitmapInfo);
 
-    // Recreate the cursor image
+    /* Recreate the cursor image */
     if (cursorImage)
         CGContextRelease(cursorImage);
     cursorImage = CGBitmapContextCreate(NULL, 32, nHeight, 8, 32 * 4, cgColorspace, cgBitmapInfo);
@@ -180,7 +180,7 @@
     
     if (captureMouse)
     {
-        // Turning on mouse capture
+        /* Turning on mouse capture */
         CGPoint cp;
         NSPoint temp;
         NSScreen *disp;
@@ -193,19 +193,20 @@
         CGAssociateMouseAndMouseCursorPosition(FALSE);
         [NSCursor hide];
 
-        // Move the mouse into a safe position, so that a resize
-        // will note put the cursor outside the screen (as a subsequent
-        // mouse click will mess things up)
+        /* Move the mouse into a safe position, so that a resize
+         * will note put the cursor outside the screen (as a subsequent
+         * mouse click will mess things up)
+         */
 
-        // Work out the position we want to put the cursor in (the centre of the view)
+        /* Work out the position we want to put the cursor in (the centre of the view) */
         oldMouse.x = bounds.size.width / 2;
         oldMouse.y = bounds.size.height / 2;
         temp = [[self window] convertPointToScreen: oldMouse];
 
-        // Make a note of the current cursor position so we can restore it
+        /* Make a note of the current cursor position so we can restore it */
         oldMouse = [NSEvent mouseLocation];
 
-        // Find out the screen size - I do this dynamically incase we moved displays
+        /* Find out the screen size - I do this dynamically incase we moved displays */
         disp = [NSScreen mainScreen];
         devInfo = [disp deviceDescription];
         val = [devInfo objectForKey: NSDeviceSize];
@@ -217,7 +218,7 @@
     }
     else
     {
-        // Turn off mouse capture
+        /* Turn off mouse capture */
         CGPoint cp;
         NSScreen *disp;
         NSDictionary *devInfo;
@@ -226,9 +227,9 @@
 
         [[self window] setAcceptsMouseMovedEvents: NO];
 
-        // restore cursor position before the user gets to see the cursor
+        /* restore cursor position before the user gets to see the cursor */
 
-        // Find out the screen size - I do this dynamically incase we moved displays
+        /* Find out the screen size - I do this dynamically incase we moved displays */
         disp = [NSScreen mainScreen];
         devInfo = [disp deviceDescription];
         val = [devInfo objectForKey: NSDeviceSize];
@@ -295,19 +296,19 @@
         nYScale = 1;
     }
 
-    // Set the window size
+    /* Set the window size */
     frame.origin.x = 0.0;
     frame.origin.y = 0.0;
     frame.size.width = (CGFloat)(width * nXScale);
     frame.size.height = (CGFloat)(height * nYScale);
     
-    // Resize the window
+    /* Resize the window */
     [window setContentSize: frame.size];
 
-    // Resize the view
+    /* Resize the view */
     [self setFrame:frame];
     
-    // Update the description as to what part of the view is visable
+    /* Update the description as to what part of the view is visable */
     dispFrame.size.width = width;
     dispFrame.size.height = height;
     dispFrame.origin.x = 0.0;
@@ -356,7 +357,7 @@
     modState = [theEvent modifierFlags];
 
     keyState[c] = !keyState[c];
-    //NSLog(@"set %d to %d\n", c, keyState[c]);
+    /* NSLog(@"set %d to %d\n", c, keyState[c]); */
 
     const mac_to_arch_key *ktak;
     for (ktak = mac_to_arch_key_map; ktak->sym >= 0; ktak++) {
@@ -366,7 +367,7 @@
         else
           [emuThread keyUp:ktak->kid];
 
-        // Need to toggle caps lock and number lock
+        /* Need to toggle caps lock and number lock */
         if ((c == kVK_CapsLock) || (c == 0x7f))
         {
             [emuThread keyUp:ktak->kid];
@@ -376,7 +377,7 @@
       }
     }
 
-    //NSLog(@"flagsChanged: unknown key: keysym=%x\n", c);
+    /* NSLog(@"flagsChanged: unknown key: keysym=%x\n", c); */
 }
 
 
@@ -387,7 +388,7 @@
 {
     int c = [theEvent keyCode];
 
-    //NSLog(@"down char %d\n", c);
+    /* NSLog(@"down char %d\n", c); */
 
     const mac_to_arch_key *ktak;
     for (ktak = mac_to_arch_key_map; ktak->sym >= 0; ktak++) {
@@ -408,7 +409,7 @@
 {
     int c = [theEvent keyCode];
 
-    //NSLog(@"up char %d\n", c);
+    /* NSLog(@"up char %d\n", c); */
 
     const mac_to_arch_key *ktak;
     for (ktak = mac_to_arch_key_map; ktak->sym >= 0; ktak++) {
@@ -445,11 +446,11 @@
 {
     int button;
     
-    // Whoa! Only bother then we're in capture mode
+    /* Whoa! Only bother then we're in capture mode */
     if (!captureMouse)
         return;
 
-    // Work out which mouse button it should be
+    /* Work out which mouse button it should be */
     if (mouseEmulation)
     {
         if (modState & adjustModifier)
@@ -464,11 +465,12 @@
         button = ARCH_KEY_button_1;
     }
 
-    // Record the button press in the mouse event queue
+    /* Record the button press in the mouse event queue */
     [emuThread keyDown:button];
 
-    // Note what went down for when it comes up, as we can't rely on
-    // the l^Huser to still be holding the modifier key
+    /* Note what went down for when it comes up, as we can't rely on
+     * the l^Huser to still be holding the modifier key
+     */
     nMouse = button;
 }
 
@@ -478,14 +480,14 @@
  */
 - (void)mouseUp: (NSEvent *)theEvent
 {
-    // Only note stuff if we're in capture mode
+    /* Only note stuff if we're in capture mode */
     if (!captureMouse)
         return;
 
-    // Record the up event
+    /* Record the up event */
     [emuThread keyUp:nMouse];
 
-    //NSLog(@"nMouse up = %d\n", nButton);
+    /* NSLog(@"nMouse up = %d\n", nButton); */
 }
 
 
@@ -591,7 +593,7 @@
         bAspect = NO;
     }
 
-    // Force a resize
+    /* Force a resize */
     [self resizeToWidth: nWidth
                toHeight: nHeight];
 }
@@ -611,7 +613,7 @@
         bUpscale = NO;
     }
 
-    // Force a resize
+    /* Force a resize */
     [self resizeToWidth: nWidth
                toHeight: nHeight];
 }
@@ -626,7 +628,7 @@
 {
     NSUserDefaults *defaults = [NSUserDefaults standardUserDefaults];
     
-    // Get some of the prefs
+    /* Get some of the prefs */
     mouseEmulation = [defaults boolForKey: AEUseMouseEmulationKey];
     adjustModifier = [defaults integerForKey: AEAdjustModifierKey];
     menuModifier = [defaults integerForKey: AEMenuModifierKey];

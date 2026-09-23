@@ -30,10 +30,10 @@
 
 @interface ArcemView : NSView
 {
-    CGContextRef screenImage;        //!< Image for drawing screen
-    CGContextRef cursorImage;        //!< Image for drawing cursor
+    CGContextRef screenImage;        /*!< Image for drawing screen */
+    CGContextRef cursorImage;        /*!< Image for drawing cursor */
 
-    ArcemEmulator *emuThread;        //!< Thread controling the emulator
+    ArcemEmulator *emuThread;        /*!< Thread controling the emulator */
 
     BOOL captureMouse;
 
@@ -43,11 +43,12 @@
     NSEventModifierFlags modState;
     int nMouse;
 
-    // Lets us return the mouse after we capture it
+    /* Lets us return the mouse after we capture it */
     NSPoint oldMouse;
 
-    // Scaling info - over the top, but so we're not converting types all the time
-    // when rendering the screen.
+    /* Scaling info - over the top, but so we're not converting types all the time
+     * when rendering the screen.
+     */
     BOOL bAspect, bUpscale;
     int nXScale, nYScale;
     int nWidth, nHeight;
@@ -72,7 +73,7 @@
  * off we do the reverse :)
  */
 - (void)toggleMouseLock;
-//! Used when the application loses focus.
+/*! Used when the application loses focus. */
 - (void)removeMouseLock;
 - (void)toggleAspect;
 - (void)toggleUpscale;

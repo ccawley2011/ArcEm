@@ -32,7 +32,7 @@
 
 @interface ArcemController : NSObject
 {
-    IBOutlet ArcemView *arcemView;		//!< Main screen display
+    IBOutlet ArcemView *arcemView;		/*!< Main screen display */
     IBOutlet NSMenuItem *menuItemEject0;
     IBOutlet NSMenuItem *menuItemEject1;
     IBOutlet NSMenuItem *menuItemEject2;
@@ -46,36 +46,40 @@
     NSMenuItem *menuItemsEject[4];
     NSMenuItem *menuItemsMount[4];
 
-    ArcemEmulator *emuThread;		//!< Thread controling the emulator
+    ArcemEmulator *emuThread;		/*!< Thread controling the emulator */
 
     PreferenceController *preferenceController;
 
-    BOOL	bFullScreen;		//!< Are we running in full screen mode?
+    BOOL	bFullScreen;		/*!< Are we running in full screen mode? */
 }
 - (IBAction)showPreferencePanel:(id)sender;
 - (IBAction)newSim:(id)sender;
 - (IBAction)fullScreen:(id)sender;
 - (IBAction)lockMouse:(id)sender;
 
-//! give the user a file select dialog box to let the user
-//! mount a drive image. We don't want to let the user open a disk
-//! with a disk already loaded there, but we don't test here as
-//! the menu option should be disabled.
+/*! give the user a file select dialog box to let the user
+ * mount a drive image. We don't want to let the user open a disk
+ * with a disk already loaded there, but we don't test here as
+ * the menu option should be disabled.
+ */
 - (IBAction)menuMount0:(id)sender;
-//! give the user a file select dialog box to let the user
-//! mount a drive image. We don't want to let the user open a disk
-//! with a disk already loaded there, but we don't test here as
-//! the menu option should be disabled.
+/*! give the user a file select dialog box to let the user
+ * mount a drive image. We don't want to let the user open a disk
+ * with a disk already loaded there, but we don't test here as
+ * the menu option should be disabled.
+ */
 - (IBAction)menuMount1:(id)sender;
-//! give the user a file select dialog box to let the user
-//! mount a drive image. We don't want to let the user open a disk
-//! with a disk already loaded there, but we don't test here as
-//! the menu option should be disabled.
+/*! give the user a file select dialog box to let the user
+ * mount a drive image. We don't want to let the user open a disk
+ * with a disk already loaded there, but we don't test here as
+ * the menu option should be disabled.
+ */
 - (IBAction)menuMount2:(id)sender;
-//! give the user a file select dialog box to let the user
-//! mount a drive image. We don't want to let the user open a disk
-//! with a disk already loaded there, but we don't test here as
-//! the menu option should be disabled.
+/*! give the user a file select dialog box to let the user
+ * mount a drive image. We don't want to let the user open a disk
+ * with a disk already loaded there, but we don't test here as
+ * the menu option should be disabled.
+ */
 - (IBAction)menuMount3:(id)sender;
 
 - (IBAction)menuEject0:(id)sender;

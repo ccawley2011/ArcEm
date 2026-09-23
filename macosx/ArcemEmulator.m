@@ -21,13 +21,13 @@
  * 
  ****************************************************************************/
 
-//
-//  ArcemEmulator.m
-//  ArcEm
-//
-//  Created by Michael Dales on Wed May 15 2002.
-//  Copyright (c) 2002 __MyCompanyName__. All rights reserved.
-//
+/*
+ *  ArcemEmulator.m
+ *  ArcEm
+ *
+ *  Created by Michael Dales on Wed May 15 2002.
+ *  Copyright (c) 2002 __MyCompanyName__. All rights reserved.
+ */
 
 #import "ArcemEmulator.h"
 #import "../armdefs.h"
@@ -44,8 +44,9 @@ extern ArcemConfig hArcemConfig;
 ArcemView* disp;
 char arcemDir[256];
 
-// This is where the imperative world meets the OO world. These functions could
-// be in DispKey.c, but that would need more headers.
+/* This is where the imperative world meets the OO world. These functions could
+ * be in DispKey.c, but that would need more headers.
+ */
 
 /*------------------------------------------------------------------------------
  * resizeWindow - called when the VIDC display sizes. Sometimes it's negative
@@ -135,7 +136,7 @@ void updateDisplay(int x, int y, int width, int height)
     [disp setEmulator:nil];
     bActive = FALSE;
 
-    // TODO: Keep the application open so that settings can still be changed
+    /* TODO: Keep the application open so that settings can still be changed */
     exit(exit_code);
 
     [NSThread exit];
@@ -152,7 +153,7 @@ void updateDisplay(int x, int y, int width, int height)
         bRestart = TRUE;
         ARMul_Exit(state,0);
     } else {
-        // Run the processing thread
+        /* Run the processing thread */
         [NSThread detachNewThreadSelector: @selector(threadStart:)
                                  toTarget: self
                                withObject: (__bridge id)CFBridgingRetain(arcemView)];

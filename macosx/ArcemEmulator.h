@@ -22,13 +22,13 @@
  * 
  ****************************************************************************/
 
-//
-//  ArcemEmulator.h
-//  ArcEm
-//
-//  Created by Michael Dales on Wed May 15 2002.
-//  Copyright (c) 2002 __MyCompanyName__. All rights reserved.
-//
+/*
+ *  ArcemEmulator.h
+ *  ArcEm
+ *
+ *  Created by Michael Dales on Wed May 15 2002.
+ *  Copyright (c) 2002 __MyCompanyName__. All rights reserved.
+ */
 
 #import <Foundation/Foundation.h>
 
@@ -51,7 +51,7 @@ struct ARMul_State;
 - (void)mouseMovedX:(int)xdiff
                   Y:(int)ydiff;
 
-- (void)threadStart:(id)anObject;  //!< Where the thread is launched
+- (void)threadStart:(id)anObject;  /*!< Where the thread is launched */
 
 
 @end

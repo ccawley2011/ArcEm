@@ -24,7 +24,7 @@
 
 #import "PreferenceController.h"
 
-// The keys we use for our plist
+/* The keys we use for our plist */
 NSString *const AEUseMouseEmulationKey = @"Use Mouse Emulation";
 NSString *const AEAdjustModifierKey = @"Adjust Modifier";
 NSString *const AEMenuModifierKey = @"Menu Modifier";
@@ -92,10 +92,10 @@ const static NSEventModifierFlags modifier_table[5] = {
     id cell;
     NSEventModifierFlags mod;
 
-    // find what's currently selected
+    /* find what's currently selected */
     cell = [menuModifier selectedCell];
 
-    // Set set the cell's tag to match up with entries in out modifier_table
+    /* Set set the cell's tag to match up with entries in out modifier_table */
     mod = modifier_table[[cell tag]];
 
     [[NSUserDefaults standardUserDefaults] setInteger: mod
@@ -113,10 +113,10 @@ const static NSEventModifierFlags modifier_table[5] = {
     id cell;
     NSEventModifierFlags mod;
 
-    // find what's currently selected
+    /* find what's currently selected */
     cell = [adjustModifier selectedCell];
 
-    // Set set the cell's tag to match up with entries in out modifier_table
+    /* Set set the cell's tag to match up with entries in out modifier_table */
     mod = modifier_table[[cell tag]];
 
     [[NSUserDefaults standardUserDefaults] setInteger: mod

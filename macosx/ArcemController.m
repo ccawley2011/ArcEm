@@ -63,10 +63,10 @@ ArcemConfig hArcemConfig;
         preferenceController = nil;
         emuThread = nil;
 
-        // Defaults
+        /* Defaults */
         defaultValues = [NSMutableDictionary dictionary];
 
-        // ...
+        /* ... */
         [defaultValues setObject: @YES
                           forKey: AEUseMouseEmulationKey];
         [defaultValues setObject: @(NSEventModifierFlagOption)
@@ -94,7 +94,7 @@ ArcemConfig hArcemConfig;
     }
     else
     {
-        // Create the thread for the enumlator to run in
+        /* Create the thread for the enumlator to run in */
         emuThread = [[ArcemEmulator alloc] initWithView:arcemView];
     }
 }
@@ -110,17 +110,17 @@ ArcemConfig hArcemConfig;
     [super awakeFromNib];
     int i;
 
-    // Create an initial emulator thread
+    /* Create an initial emulator thread */
     [self restartEmulatorThread];
 
-    // Bring that window to the front
+    /* Bring that window to the front */
     [[arcemView window] makeKeyAndOrderFront: self];
     [[arcemView window] makeFirstResponder: arcemView];
     [arcemView prefsUpdated];
 
-    // Set the menu options
+    /* Set the menu options */
 
-    // Build menu item arrays
+    /* Build menu item arrays */
     menuItemsMount[0] = menuItemMount0;
     menuItemsMount[1] = menuItemMount1;
     menuItemsMount[2] = menuItemMount2;
@@ -130,15 +130,16 @@ ArcemConfig hArcemConfig;
     menuItemsEject[2] = menuItemEject2;
     menuItemsEject[3] = menuItemEject3;
 
-    // We'll manage the menu items from now on thank you very much
+    /* We'll manage the menu items from now on thank you very much */
     [[menuItemMount0 menu] setAutoenablesItems: NO];
     [[menuItemEject0 menu] setAutoenablesItems: NO];
     
     for (i = 0; i < 4; i++)
         [menuItemsEject[i] setEnabled: NO];
     
-    // Now set up to receive notification of when we lose control (either we're hidden
-    // or the user cmd-tabbed away
+    /* Now set up to receive notification of when we lose control (either we're hidden
+     * or the user cmd-tabbed away
+     */
     [[NSNotificationCenter defaultCenter] addObserver: self
                                              selector: @selector(applicationHide:)
                                                  name: NSApplicationWillResignActiveNotification
@@ -151,12 +152,12 @@ ArcemConfig hArcemConfig;
  */
 - (IBAction)fullScreen:(id)sender
 {
-    // What we do depends if we're in full screen mode or not
+    /* What we do depends if we're in full screen mode or not */
     if (!bFullScreen)
     {
-        // We're running the emulator in a window, so kill it first
-        //[[arcemView window] close];
-        //arcemView = nil;
+        /* We're running the emulator in a window, so kill it first */
+        /* [[arcemView window] close]; */
+        /* arcemView = nil; */
     }
     else
     {
@@ -288,12 +289,12 @@ ArcemConfig hArcemConfig;
  */
 - (void)changeDriveImageAtIndex: (int)fdNum toURL: (NSURL*)newfile
 {
-    // One assumes if we managed to select a file then it exists...
+    /* One assumes if we managed to select a file then it exists... */
     
-    // Force the FDC to reload that drive
+    /* Force the FDC to reload that drive */
     FDC_InsertFloppy(fdNum, [newfile fileSystemRepresentation]);
     
-    // Now disable the insert menu option and enable the eject menu option
+    /* Now disable the insert menu option and enable the eject menu option */
     [menuItemsMount[fdNum] setEnabled: NO];
     [menuItemsEject[fdNum] setEnabled: YES];
 }
@@ -304,10 +305,10 @@ ArcemConfig hArcemConfig;
  */
 - (IBAction)menuEject0:(id)sender
 {
-    // Update the sim
+    /* Update the sim */
     FDC_EjectFloppy(0);
     
-    // Now disable the insert menu option and enable the eject menu option
+    /* Now disable the insert menu option and enable the eject menu option */
     [menuItemsMount[0] setEnabled: YES];
     [menuItemsEject[0] setEnabled: NO];
 }
@@ -318,10 +319,10 @@ ArcemConfig hArcemConfig;
  */
 - (IBAction)menuEject1:(id)sender
 {
-    // Update the sim
+    /* Update the sim */
     FDC_EjectFloppy(1);
 
-    // Now disable the insert menu option and enable the eject menu option
+    /* Now disable the insert menu option and enable the eject menu option */
     [menuItemsMount[1] setEnabled: YES];
     [menuItemsEject[1] setEnabled: NO];
 }
@@ -333,10 +334,10 @@ ArcemConfig hArcemConfig;
  */
 - (IBAction)menuEject2:(id)sender
 {
-    // Update the sim
+    /* Update the sim */
     FDC_EjectFloppy(2);
 
-    // Now disable the insert menu option and enable the eject menu option
+    /* Now disable the insert menu option and enable the eject menu option */
     [menuItemsMount[2] setEnabled: YES];
     [menuItemsEject[2] setEnabled: NO];
 }
@@ -348,10 +349,10 @@ ArcemConfig hArcemConfig;
  */
 - (IBAction)menuEject3:(id)sender
 {
-    // Update the sim
+    /* Update the sim */
     FDC_EjectFloppy(3);
 
-    // Now disable the insert menu option and enable the eject menu option
+    /* Now disable the insert menu option and enable the eject menu option */
     [menuItemsMount[3] setEnabled: YES];
     [menuItemsEject[3] setEnabled: NO];
 }
