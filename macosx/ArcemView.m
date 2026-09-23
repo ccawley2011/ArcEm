@@ -118,6 +118,7 @@
 {
     NSRect bounds = [self bounds];
     CGRect r;
+    CGImageRef image, subImage;
     
     NSGraphicsContext *ctx = [NSGraphicsContext currentContext];
     CGContextRef cgc = [ctx CGContext];
@@ -131,7 +132,7 @@
     {
         CGContextFlush (screenImage);
 
-        CGImageRef image = CGBitmapContextCreateImage (screenImage);
+        image = CGBitmapContextCreateImage (screenImage);
         CGContextDrawImage (cgc, r, image);
         CGImageRelease(image);
     }
@@ -145,8 +146,8 @@
     {
         CGContextFlush(cursorImage);
 
-        CGImageRef image = CGBitmapContextCreateImage(cursorImage);
-        CGImageRef subImage = CGImageCreateWithImageInRect (image, CGRectMake(0, 0, rMouseWidth, rMouseHeight));
+        image = CGBitmapContextCreateImage(cursorImage);
+        subImage = CGImageCreateWithImageInRect (image, CGRectMake(0, 0, rMouseWidth, rMouseHeight));
 
         CGContextDrawImage (cgc, r, subImage);
 
@@ -353,13 +354,13 @@
  */
 - (void)flagsChanged:(NSEvent *)theEvent
 {
+    const mac_to_arch_key *ktak;
     int c = [theEvent keyCode];
     modState = [theEvent modifierFlags];
 
     keyState[c] = !keyState[c];
     /* NSLog(@"set %d to %d\n", c, keyState[c]); */
 
-    const mac_to_arch_key *ktak;
     for (ktak = mac_to_arch_key_map; ktak->sym >= 0; ktak++) {
       if (ktak->sym == c) {
         if (keyState[c])

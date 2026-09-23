@@ -43,6 +43,8 @@ ArcemConfig hArcemConfig;
     if (self = [super init])
     {
         ArcemConfig_Result result = Result_Continue;
+        NSMutableDictionary *defaultValues;
+        NSString *path;
 
         if (result == Result_Continue)
             result = ArcemConfig_SetupDefaults(&hArcemConfig);
@@ -56,8 +58,7 @@ ArcemConfig hArcemConfig;
             exit(result == Result_Success ? EXIT_SUCCESS : EXIT_FAILURE);
         }
 
-        NSMutableDictionary *defaultValues;
-        NSString *path = [NSHomeDirectory() stringByAppendingPathComponent:@"arcem"];
+        path = [NSHomeDirectory() stringByAppendingPathComponent:@"arcem"];
 
         bFullScreen = NO;
         preferenceController = nil;
@@ -107,8 +108,9 @@ ArcemConfig hArcemConfig;
  */
 - (void)awakeFromNib
 {
-    [super awakeFromNib];
     int i;
+
+    [super awakeFromNib];
 
     /* Create an initial emulator thread */
     [self restartEmulatorThread];

@@ -26,6 +26,8 @@
 
 #import <Cocoa/Cocoa.h>
 
+#include "../c99.h"
+
 @class ArcemEmulator;
 
 @interface ArcemView : NSView
