@@ -26,9 +26,6 @@ EXTNROM_SUPPORT=yes
 # Sound support - currently experimental - to enable set to 'yes'
 SOUND_SUPPORT=no
 
-# Enable this if sound support uses pthreads
-SOUND_PTHREAD=yes
-
 # HostFS support - currently experimental - to enable set to 'yes'
 HOSTFS_SUPPORT=yes
 
@@ -114,7 +111,6 @@ HOST_BIGENDIAN=yes
 HOSTFS_SUPPORT=yes
 EXTNROM_SUPPORT=yes
 SOUND_SUPPORT=yes
-SOUND_PTHREAD=no
 SRCS += amiga/wb.c amiga/arexx.c amiga/sound.c
 OBJS += amiga/wb.o amiga/arexx.o amiga/sound.o
 CPPFLAGS += -D__LARGE64_FILES -D__USE_INLINE__
@@ -135,7 +131,6 @@ HOST_BIGENDIAN=yes
 HOSTFS_SUPPORT=yes
 EXTNROM_SUPPORT=yes
 SOUND_SUPPORT=yes
-SOUND_PTHREAD=no
 SRCS += amiga/wb.c amiga/sound.c
 OBJS += amiga/wb.o amiga/sound.o
 CPPFLAGS += -D__amigaos3__
@@ -148,7 +143,6 @@ ifeq (${SYSTEM},riscos-single)
 HOSTFS_SUPPORT=yes
 # Sound
 SOUND_SUPPORT=yes
-SOUND_PTHREAD=no
 OBJS += riscos-single/sound.o riscos-single/soundbuf.o
 # General
 EXTNROM_SUPPORT=yes
@@ -216,7 +210,6 @@ CPPFLAGS += -D_LARGEFILE_SOURCE -D_LARGEFILE64_SOURCE -D_FILE_OFFSET_BITS=64
 endif
 OBJS += SDL/fb.o SDL/render.o SDL/sound.o
 SOUND_SUPPORT=yes
-SOUND_PTHREAD=no
 endif
 
 ifeq (${SYSTEM},X)
@@ -243,15 +236,11 @@ LIBS += -luser32 -lgdi32 -lcomdlg32 -lwinmm
 # Comment the following line to have a console window
 LIBS += -mwindows
 SOUND_SUPPORT = yes
-SOUND_PTHREAD = no
 endif
 
 ifeq (${SOUND_SUPPORT},yes)
 CPPFLAGS += -DSOUND_SUPPORT
 INCS += arch/sound.h
-ifeq (${SOUND_PTHREAD},yes)
-LIBS += -lpthread
-endif
 endif
 
 ifeq (${HOSTFS_SUPPORT},yes)

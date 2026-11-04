@@ -9,7 +9,6 @@
 #include <unistd.h>
 #include <sys/ioctl.h>
 #include <sys/stat.h>
-#include <pthread.h>
 
 #include "../armdefs.h"
 #include "../arch/ControlPane.h"
@@ -23,95 +22,17 @@ static uint32_t sampleRate = 44100;
 
 static int soundDevice;
 
-/* Threading currently doesn't work very well - no priority control is in place, so the sound thread hardly ever gets any CPU time */
-/*#define SOUND_THREAD*/
-
-#ifdef SOUND_THREAD
-static pthread_t thread;
-static pthread_mutex_t mut = PTHREAD_MUTEX_INITIALIZER;
-static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
-
-#define BUFFER_SAMPLES (16384) /* 8K stereo pairs */
-
-SoundData sound_buffer[BUFFER_SAMPLES];
-volatile int32_t sound_buffer_in=BUFFER_SAMPLES; /* Number of samples we've placed in the buffer */
-volatile int32_t sound_buffer_out=0; /* Number of samples read out by the sound thread */
-static const int32_t sound_buff_mask=BUFFER_SAMPLES-1;
-#else
 SoundData sound_buffer[256*2]; /* Must be >= 2*Sound_BatchSize! */
-#endif
 
 SoundData *Sound_GetHostBuffer(int32_t *destavail)
 {
-#ifdef SOUND_THREAD
-  int32_t local_buffer_in,used,ofs,buffree;
-  /* Work out how much space is available until next wrap point, or we start overwriting data */
-  pthread_mutex_lock(&mut);
-  local_buffer_in = sound_buffer_in;
-  used = local_buffer_in-sound_buffer_out;
-  pthread_mutex_unlock(&mut);
-  ofs = local_buffer_in & sound_buff_mask;
-  buffree = BUFFER_SAMPLES-MAX(ofs,used);
-  *destavail = buffree>>1;
-  return sound_buffer + ofs;
-#else
   /* Just assume we always have enough space for the max batch size */
   *destavail = sizeof(sound_buffer)/(sizeof(SoundData)*2);
   return sound_buffer;
-#endif
 }
 
 void Sound_HostBuffered(SoundData *buffer,int32_t numSamples)
 {
-#ifdef SOUND_THREAD
-  int32_t local_buffer_in,used,ofs;
-  UNUSED_VAR(buffer);
-  numSamples <<= 1;
-  pthread_mutex_lock(&mut);
-  local_buffer_in = sound_buffer_in;
-  used = local_buffer_in-sound_buffer_out;
-  pthread_mutex_unlock(&mut);
-  ofs = local_buffer_in & sound_buff_mask;
-
-  local_buffer_in += numSamples;
-  
-  if(buffree == numSamples)
-  {
-    warn_sound("*** sound overflow! ***\n");
-    if(Sound_FudgeRate < -10)
-      Sound_FudgeRate = Sound_FudgeRate/2;
-    else
-      Sound_FudgeRate+=10;
-  }
-  else if(!used)
-  {
-    warn_sound("*** sound underflow! ***\n");
-    if(Sound_FudgeRate > 10)
-      Sound_FudgeRate = Sound_FudgeRate/2;
-    else
-      Sound_FudgeRate-=10;
-  }
-  else if(used < BUFFER_SAMPLES/4)
-  {
-    Sound_FudgeRate--;
-  }
-  else if(buffree < BUFFER_SAMPLES/4)
-  {
-    Sound_FudgeRate++;
-  }
-  else if(Sound_FudgeRate)
-  {
-    /* Bring the fudge value back towards 0 until we go out of the comfort zone */
-    Sound_FudgeRate += (Sound_FudgeRate>0?-1:1);
-  }
-
-  pthread_mutex_lock(&mut);
-  sound_buffer_in = local_buffer_in;
-  pthread_mutex_unlock(&mut);
-  pthread_cond_broadcast(&cond);
-
-  pthread_yield();
-#else
   audio_buf_info buf;
   numSamples <<= 1;
   if (ioctl(soundDevice, SOUND_PCM_GETOSPACE, &buf) != -1) {
@@ -157,48 +78,7 @@ void Sound_HostBuffered(SoundData *buffer,int32_t numSamples)
   }
   
   write(soundDevice,buffer,numSamples*sizeof(SoundData));
-#endif
 }
-
-#ifdef SOUND_THREAD
-static void *
-sound_writeThread(void *arg)
-{
-  int32_t local_buffer_out = sound_buffer_out;
-
-  UNUSED_VAR(arg);
-
-  for (;;) {
-    int32_t avail;
-
-    pthread_mutex_lock(&mut);
-    sound_buffer_out = local_buffer_out;
-    avail = sound_buffer_in-local_buffer_out;
-    pthread_mutex_unlock(&mut);
-
-    dbug_sound("%d\n",avail);
-    if (avail) {
-      int32_t ofs = local_buffer_out & sound_buff_mask;
-
-      if(ofs + avail > BUFFER_SAMPLES) {
-        /* We're about to wrap */
-        avail = BUFFER_SAMPLES-ofs;
-      }
-
-      write(soundDevice, sound_buffer + ofs,
-            avail * sizeof(SoundData));
-
-      local_buffer_out += avail;
-    } else {
-      pthread_mutex_lock(&mut);
-      pthread_cond_wait(&cond, &mut);
-      pthread_mutex_unlock(&mut);
-    }
-  }
-
-  return NULL;
-}
-#endif
 
 bool
 Sound_InitHost(ARMul_State *state)
@@ -255,10 +135,6 @@ Sound_InitHost(ARMul_State *state)
   Sound_BatchSize = 256;
 
   Sound_HostRate = sampleRate<<10;
-
-#ifdef SOUND_THREAD
-  pthread_create(&thread, NULL, sound_writeThread, 0);
-#endif
 
   return true;
 }
