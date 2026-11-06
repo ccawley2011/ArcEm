@@ -293,7 +293,7 @@ static void Sound_Resume(void)
 }
 #endif
 
-SoundData *Sound_GetHostBuffer(int32_t *destavail)
+SoundData *Sound_GetHostBuffer(size_t *destavail)
 {
   /* Work out how much space is available until next wrap point, or we start overwriting data */
   int32_t local_buffer_in,used,ofs,buffree;
@@ -355,7 +355,7 @@ static void adjust_fudgerate(int32_t used, int32_t out)
   Sound_FudgeRate = adjust;
 }
 
-void Sound_HostBuffered(SoundData *buffer,int32_t numSamples)
+void Sound_HostBuffered(SoundData *buffer,size_t numSamples)
 {
   int32_t local_buffer_in,used,out,underflows;
   UNUSED_VAR(buffer);
@@ -462,13 +462,13 @@ Sound_InitHost(ARMul_State *state)
   /* Calculate the desired buffer level */
   buffer_threshold = ((int)(buffer_seconds*freq))<<1;
   /* Low thresholds may cause issues */
-  if (buffer_threshold < Sound_BatchSize*4)
-    buffer_threshold = Sound_BatchSize*4;
+  if (buffer_threshold < (int32_t)Sound_BatchSize*4)
+    buffer_threshold = (int32_t)Sound_BatchSize*4;
   if (buffer_threshold < samples*2*4)
     buffer_threshold = samples*2*4;
   /* Big thresholds will cause problems too! */
-  if (buffer_threshold+Sound_BatchSize*4 > BUFFER_SAMPLES)
-    buffer_threshold = BUFFER_SAMPLES-Sound_BatchSize*4;
+  if (buffer_threshold+(int32_t)Sound_BatchSize*4 > BUFFER_SAMPLES)
+    buffer_threshold = BUFFER_SAMPLES-(int32_t)Sound_BatchSize*4;
 
   sound_buffer_in = buffer_threshold;
   local_buffer_out = 0;

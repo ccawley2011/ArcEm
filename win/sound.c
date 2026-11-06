@@ -45,14 +45,14 @@ static void CALLBACK sound_callback(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstanc
 	LeaveCriticalSection(&waveCriticalSection);
 }
 
-SoundData *Sound_GetHostBuffer(int32_t *destavail)
+SoundData *Sound_GetHostBuffer(size_t *destavail)
 {
 	/* Just assume we always have enough space for the max batch size */
 	*destavail = sizeof(sound_buffer)/(sizeof(SoundData)*2);
 	return sound_buffer;
 }
 
-void Sound_HostBuffered(SoundData *buffer,int32_t numSamples)
+void Sound_HostBuffered(SoundData *buffer,size_t numSamples)
 {
 	LPSTR lpbuffer = (LPSTR)buffer;
 	DWORD_PTR size = numSamples * 2 * sizeof(SoundData);

@@ -153,8 +153,8 @@ static bool init_sharedsound(void)
 	   This is the low threshold value, so we divide by 512 to get the desired level, then by two again to get the low level */
 	buffer_threshold = ((int)(buffer_seconds*((float)Sound_HostRate)))>>10;
 	/* Low thresholds may cause issues */
-	if(buffer_threshold<Sound_BatchSize*4)
-		buffer_threshold = Sound_BatchSize*4;
+	if(buffer_threshold<(int)Sound_BatchSize*4)
+		buffer_threshold = (int)Sound_BatchSize*4;
 	/* Big thresholds will cause problems too! */
 	if(buffer_threshold*4 > BUFFER_SAMPLES)
 		buffer_threshold = BUFFER_SAMPLES>>2;
@@ -208,9 +208,10 @@ void Sound_ShutdownHost(ARMul_State *state)
   shutdown_sharedsound();
 }
 
-SoundData *Sound_GetHostBuffer(int32_t *destavail)
+SoundData *Sound_GetHostBuffer(size_t *destavail)
 {
-  int used, ofs, buffree;
+  size_t buffree;
+  int used, ofs;
   /* Work out how much space is available until next wrap point, or we start overwriting data */
   if(!sound_handler_id)
   {
@@ -224,9 +225,10 @@ SoundData *Sound_GetHostBuffer(int32_t *destavail)
   return sound_buffer + ofs;
 }
 
-void Sound_HostBuffered(SoundData *buffer,int32_t numSamples)
+void Sound_HostBuffered(SoundData *buffer,size_t numSamples)
 {
-  int used, buffree;
+  size_t buffree;
+  int used;
 
   UNUSED_VAR(buffer);
 

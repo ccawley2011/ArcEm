@@ -24,14 +24,14 @@ static int soundDevice;
 
 SoundData sound_buffer[256*2]; /* Must be >= 2*Sound_BatchSize! */
 
-SoundData *Sound_GetHostBuffer(int32_t *destavail)
+SoundData *Sound_GetHostBuffer(size_t *destavail)
 {
   /* Just assume we always have enough space for the max batch size */
   *destavail = sizeof(sound_buffer)/(sizeof(SoundData)*2);
   return sound_buffer;
 }
 
-void Sound_HostBuffered(SoundData *buffer,int32_t numSamples)
+void Sound_HostBuffered(SoundData *buffer,size_t numSamples)
 {
   audio_buf_info buf;
   numSamples <<= 1;
@@ -45,9 +45,9 @@ void Sound_HostBuffered(SoundData *buffer,int32_t numSamples)
     int32_t used = (bufsize-buf.bytes)/sizeof(SoundData);
     int32_t stepsize = Sound_DMARate>>2;
     bufsize /= sizeof(SoundData);
-    if(numSamples > buffree)
+    if((int32_t)numSamples > buffree)
     {
-      warn_sound("*** sound overflow! %d %d %d %d ***\n",numSamples-buffree,ARMul_EmuRate,Sound_FudgeRate,Sound_DMARate);
+      warn_sound("*** sound overflow! %"PRId32" %d %d %d ***\n",(int32_t)numSamples-buffree,ARMul_EmuRate,Sound_FudgeRate,Sound_DMARate);
       numSamples = buffree; /* We could block until space is available, but I'm woried we'd get stuck blocking forever because the FudgeRate increase wouldn't compensate for the ARMul cycles lost due to blocking */
       if(Sound_FudgeRate < -stepsize)
         Sound_FudgeRate = Sound_FudgeRate/2;

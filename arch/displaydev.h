@@ -42,8 +42,8 @@ struct Vidc_Regs {
   uint_least16_t Vert_CursorStart;
   uint_least16_t Vert_CursorEnd;
   uint_least16_t ControlReg;
-  uint8_t SoundFreq;
-  uint8_t StereoImageReg[8];
+  uint_least8_t SoundFreq;
+  uint_least8_t StereoImageReg[8];
 
   /* This avoids -Wcast-align warnings with Clang. */
   uint64_t align;

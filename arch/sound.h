@@ -15,7 +15,7 @@ extern void Sound_Shutdown(ARMul_State *state);
 
 typedef int16_t SoundData;
 
-extern int Sound_BatchSize; /* How many 16*2 sample batches to attempt to deliver to the platform code at once */
+extern size_t Sound_BatchSize; /* How many 16*2 sample batches to attempt to deliver to the platform code at once */
 extern CycleCount Sound_DMARate; /* How many cycles between DMA fetches */
 #ifdef SOUND_FUDGERATE_FRAC
 extern uint32_t Sound_FudgeRate; /* New version of Sound_FudgeRate. 8.24 scale factor applied to Sound_DMARate; can be used by host code to fine-tune audio buffer levels */
@@ -45,12 +45,12 @@ extern void Sound_ShutdownHost(ARMul_State *state);
 /* This call is made to the platform code to get a pointer to an output buffer
    destavail must be set to the available space, measured in the number of stereo pairs (i.e. 4 byte units)
 */
-extern SoundData *Sound_GetHostBuffer(int32_t *destavail);
+extern SoundData *Sound_GetHostBuffer(size_t *destavail);
 
 /* This call is made to the platform code once the above buffer has been filled
    numSamples is the number of stereo pairs that were placed in the buffer
 */
-extern void Sound_HostBuffered(SoundData *buffer,int32_t numSamples);
+extern void Sound_HostBuffered(SoundData *buffer,size_t numSamples);
 #endif
 
 #endif
