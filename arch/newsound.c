@@ -34,7 +34,7 @@
 #ifdef SOUND_SUPPORT
 #define MAX_BATCH_SIZE 1024
 
-size_t Sound_BatchSize = 1; /* How many 16*2 sample batches to try to do at once */
+size_t Sound_BatchSize = 1; /* How many 16 frame batches to try to do at once */
 CycleCount Sound_DMARate; /* How many cycles between DMA fetches */
 Sound_StereoSense eSound_StereoSense = Stereo_LeftRight;
 #ifdef SOUND_FUDGERATE_FRAC
@@ -49,12 +49,12 @@ uint32_t Sound_HostRate; /* Rate of host sound system, in 1/1024 Hz */
 static SoundData soundTable[256];
 static uint32_t channelAmount[8][2];
 
-#define SOUNDBUFFER_SIZE (16*MAX_BATCH_SIZE) /* Size in stereo pairs. 16x factor is arbitrary, to cope with most of the sensible downsampling factors? */
-static SoundData soundBuffer[2*SOUNDBUFFER_SIZE];
-static size_t soundBufferAmt=0; /* Number of stereo pairs buffered */
+#define SOUNDBUFFER_SIZE (16*MAX_BATCH_SIZE) /* Size in frames. 16x factor is arbitrary, to cope with most of the sensible downsampling factors? */
+static SoundFrame soundBuffer[SOUNDBUFFER_SIZE];
+static size_t soundBufferAmt=0; /* Number of frames buffered */
 #define TIMESHIFT 9 /* Bigger values make the mixing more accurate. But 9 is the biggest value possible to avoid overflows in the 32bit accumulators. */
-static uint32_t soundTime=0; /* Offset into 1st sample pair of buffer */
-static uint32_t soundTimeStep; /* How many source samples (1 byte) per dest sample (2x16 bit), fixed point with TIMESHIFT fraction bits */
+static uint32_t soundTime=0; /* Offset into 1st frame of soundBuffer */
+static uint32_t soundTimeStep; /* How many source samples (1 byte) per dest frame, fixed point with TIMESHIFT fraction bits */
 static uint32_t soundScale; /* Output scale factor, 16.16 fixed point */
 #else
 static CycleCount Sound_DMARate; /* How many cycles between DMA fetches */
@@ -208,7 +208,7 @@ void Sound_SoundFreqUpdated(ARMul_State *state)
   UNUSED_VAR(state);
 }
 
-static void Sound_Log2Lin(const uint8_t *in,SoundData *out,size_t avail)
+static void Sound_Log2Lin(const uint8_t *in,SoundFrame *out,size_t avail)
 {
   /* Convert the source log data to linear. Note that no mixing is done here. */
   avail *= 2;
@@ -222,40 +222,42 @@ static void Sound_Log2Lin(const uint8_t *in,SoundData *out,size_t avail)
     SoundData val1 = soundTable[in[2]];
     SoundData val2 = soundTable[in[1]];
     SoundData val3 = soundTable[in[0]];
-    *out++ = (channelAmount[0][0] * val0)>>16;
-    *out++ = (channelAmount[0][1] * val0)>>16;
-    *out++ = (channelAmount[1][0] * val1)>>16;
-    *out++ = (channelAmount[1][1] * val1)>>16;
-    *out++ = (channelAmount[2][0] * val2)>>16;
-    *out++ = (channelAmount[2][1] * val2)>>16;
-    *out++ = (channelAmount[3][0] * val3)>>16;
-    *out++ = (channelAmount[3][1] * val3)>>16;
+    out[0].channel[0] = (channelAmount[0][0] * val0)>>16;
+    out[0].channel[1] = (channelAmount[0][1] * val0)>>16;
+    out[1].channel[0] = (channelAmount[1][0] * val1)>>16;
+    out[1].channel[1] = (channelAmount[1][1] * val1)>>16;
+    out[2].channel[0] = (channelAmount[2][0] * val2)>>16;
+    out[2].channel[1] = (channelAmount[2][1] * val2)>>16;
+    out[3].channel[0] = (channelAmount[3][0] * val3)>>16;
+    out[3].channel[1] = (channelAmount[3][1] * val3)>>16;
     val0 = soundTable[in[7]];
     val1 = soundTable[in[6]];
     val2 = soundTable[in[5]];
     val3 = soundTable[in[4]];
-    *out++ = (channelAmount[4][0] * val0)>>16;
-    *out++ = (channelAmount[4][1] * val0)>>16;
-    *out++ = (channelAmount[5][0] * val1)>>16;
-    *out++ = (channelAmount[5][1] * val1)>>16;
-    *out++ = (channelAmount[6][0] * val2)>>16;
-    *out++ = (channelAmount[6][1] * val2)>>16;
-    *out++ = (channelAmount[7][0] * val3)>>16;
-    *out++ = (channelAmount[7][1] * val3)>>16;
+    out[4].channel[0] = (channelAmount[4][0] * val0)>>16;
+    out[4].channel[1] = (channelAmount[4][1] * val0)>>16;
+    out[5].channel[0] = (channelAmount[5][0] * val1)>>16;
+    out[5].channel[1] = (channelAmount[5][1] * val1)>>16;
+    out[6].channel[0] = (channelAmount[6][0] * val2)>>16;
+    out[6].channel[1] = (channelAmount[6][1] * val2)>>16;
+    out[7].channel[0] = (channelAmount[7][0] * val3)>>16;
+    out[7].channel[1] = (channelAmount[7][1] * val3)>>16;
     in += 8;
+    out += 8;
 #else
     uint_fast8_t i;
     for(i=0;i<8;i++)
     {
       SoundData val = soundTable[*in++];
-      *out++ = (channelAmount[i][0] * val)>>16;
-      *out++ = (channelAmount[i][1] * val)>>16;
+      out->channel[0] = (channelAmount[i][0] * val)>>16;
+      out->channel[1] = (channelAmount[i][1] * val)>>16;
+      ++out;
     }
 #endif
   }
 }
 
-static size_t Sound_Mix(SoundData *out,size_t destavail)
+static size_t Sound_Mix(SoundFrame *out,size_t destavail)
 {
   /* This mixing function performs two roles:
   
@@ -312,7 +314,7 @@ static size_t Sound_Mix(SoundData *out,size_t destavail)
      ticks (shifted by TIMESHIFT). 
   */
      
-  const SoundData *in = soundBuffer;
+  const SoundFrame *in = soundBuffer;
   int32_t srcavail = (int32_t)soundBufferAmt;
   uint32_t time = soundTime;
   const int32_t timestep = soundTimeStep;
@@ -336,14 +338,15 @@ static size_t Sound_Mix(SoundData *out,size_t destavail)
     {
       int32_t lacc=0,racc=0;
       int32_t lacc2=0,racc2=0;
-      const SoundData *oldin = in;
+      const SoundFrame *oldin = in;
       int32_t amt = (1<<TIMESHIFT)-time;
       /* Calculate the sum of the first few samples
          'amt' is being used to store the contribution factor */ 
       while(amt<(8<<TIMESHIFT))
       {
-        lacc += *in++*amt;
-        racc += *in++*amt;
+        lacc += in->channel[0]*amt;
+        racc += in->channel[1]*amt;
+        ++in;
         amt += 1<<TIMESHIFT;
       }
       /* Calculate the sum of the middle bit (using the 2nd accumulator set)
@@ -351,8 +354,9 @@ static size_t Sound_Mix(SoundData *out,size_t destavail)
          at 8 source ticks) */
       while(amt<=timestep)
       {
-        lacc2 += *in++;
-        racc2 += *in++;
+        lacc2 += in->channel[0];
+        racc2 += in->channel[1];
+        ++in;
         amt += 1<<TIMESHIFT;
       }
       /* Calculate the sum of the tail end
@@ -360,19 +364,21 @@ static size_t Sound_Mix(SoundData *out,size_t destavail)
       amt = (8<<TIMESHIFT)-(amt-timestep);
       while(amt>0)
       {
-        lacc += *in++*amt;
-        racc += *in++*amt;
+        lacc += in->channel[0]*amt;
+        racc += in->channel[1]*amt;
+        ++in;
         amt -= 1<<TIMESHIFT;
       }
       lacc2 += lacc>>(3+TIMESHIFT);
       racc2 += racc>>(3+TIMESHIFT);
-      *out++ = (lacc2*scale)>>16;
-      *out++ = (racc2*scale)>>16;
+      out->channel[0] = (lacc2*scale)>>16;
+      out->channel[1] = (racc2*scale)>>16;
+      ++out;
       destavail--;
       time += timestep;
       amt = time>>TIMESHIFT;
       time &= (1<<TIMESHIFT)-1;
-      in = oldin+amt*2;
+      in = oldin+amt;
       srcavail -= amt;
     }
   }
@@ -389,11 +395,12 @@ static size_t Sound_Mix(SoundData *out,size_t destavail)
          S4-S8 in the diagram above.
          'amt' is being used to store the time (contribution factor is fixed
          at 'timestep') */
-      in += 16;
+      in += 8;
       while(amt > timestep)
       {
-        racc += *--in;
-        lacc += *--in;
+        --in;
+        racc += in->channel[1];
+        lacc += in->channel[0];
         amt -= 1<<TIMESHIFT;
       }
       lacc *= timestep;
@@ -404,27 +411,28 @@ static size_t Sound_Mix(SoundData *out,size_t destavail)
          few samples; for the last few it's just (timestep-amt). */
       while(amt > 0)
       {
-        in -= 2;
-        lacc += in[0]*amt + in[16]*(timestep-amt);
-        racc += in[1]*amt + in[17]*(timestep-amt);
+        --in;
+        lacc += in[0].channel[0]*amt + in[8].channel[0]*(timestep-amt);
+        racc += in[0].channel[1]*amt + in[8].channel[1]*(timestep-amt);
         amt -= 1<<TIMESHIFT;
       }
       lacc = lacc>>(3+TIMESHIFT);
       racc = racc>>(3+TIMESHIFT);
-      *out++ = (lacc*scale)>>16;
-      *out++ = (racc*scale)>>16;
+      out->channel[0] = (lacc*scale)>>16;
+      out->channel[1] = (racc*scale)>>16;
+      ++out;
       destavail--;
       time += timestep;
       amt = time>>TIMESHIFT;
       time &= (1<<TIMESHIFT)-1;
-      in += amt*2;
+      in += amt;
       srcavail -= amt;
     }
   }
 
   /* Update globals */
   srcavail += 10+(timestep>>TIMESHIFT);
-  memmove(soundBuffer,in,srcavail*sizeof(SoundData)*2); /* TODO - Improve this. Should only memmove() once we're near the end of the buffer. */
+  memmove(soundBuffer,in,srcavail*sizeof(SoundFrame)); /* TODO - Improve this. Should only memmove() once we're near the end of the buffer. */
   soundBufferAmt = srcavail;
   soundTime = time;
 
@@ -435,7 +443,7 @@ static size_t Sound_Mix(SoundData *out,size_t destavail)
 static void Sound_DoMix(void)
 {
   size_t destavail;
-  SoundData *out;
+  SoundFrame *out;
   if(soundBufferAmt <= 10+(soundTimeStep>>TIMESHIFT))
     return;
   /* Get host buffer params */
@@ -477,7 +485,7 @@ static void Sound_Process(ARMul_State *state,size_t avail)
   if(avail)
   {
     /* Log -> lin conversion */
-    Sound_Log2Lin(((uint8_t *) MEMC.PhysRam) + (MEMC.Sptr<<4),soundBuffer+(soundBufferAmt<<1),avail);
+    Sound_Log2Lin(((uint8_t *) MEMC.PhysRam) + (MEMC.Sptr<<4),soundBuffer+soundBufferAmt,avail);
     soundBufferAmt += avail<<4;
   }
   /* Process this new data */
@@ -494,7 +502,7 @@ static void Sound_DMAEvent(ARMul_State *state,CycleCount nowtime)
   CycleCount next;
   Sound_UpdateDMARate(state);
 #ifdef SOUND_SUPPORT
-  /* Work out how many source DMA fetches are required to generate Sound_BatchSize dest samples, rounded to nearest (ish) */
+  /* Work out how many source DMA fetches are required to generate Sound_BatchSize dest frames, rounded to nearest (ish) */
   srcbatchsize = (Sound_BatchSize*soundTimeStep + (8<<TIMESHIFT))>>(TIMESHIFT+4);
   if(!srcbatchsize)
     srcbatchsize = 1;

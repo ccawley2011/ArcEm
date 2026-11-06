@@ -14,7 +14,7 @@
 
 HWAVEOUT hWaveOut = INVALID_HANDLE_VALUE;
 
-SoundData sound_buffer[256*2]; /* Must be >= 2*Sound_BatchSize! */
+SoundFrame sound_buffer[256]; /* Must be >= Sound_BatchSize! */
 
 /*
  * some good values for block size and count
@@ -45,17 +45,17 @@ static void CALLBACK sound_callback(HWAVEOUT hwo, UINT uMsg, DWORD_PTR dwInstanc
 	LeaveCriticalSection(&waveCriticalSection);
 }
 
-SoundData *Sound_GetHostBuffer(size_t *destavail)
+SoundFrame *Sound_GetHostBuffer(size_t *destavail)
 {
 	/* Just assume we always have enough space for the max batch size */
-	*destavail = sizeof(sound_buffer)/(sizeof(SoundData)*2);
+	*destavail = countof(sound_buffer);
 	return sound_buffer;
 }
 
-void Sound_HostBuffered(SoundData *buffer,size_t numSamples)
+void Sound_HostBuffered(SoundFrame *buffer,size_t numFrames)
 {
 	LPSTR lpbuffer = (LPSTR)buffer;
-	DWORD_PTR size = numSamples * 2 * sizeof(SoundData);
+	DWORD_PTR size = numFrames * sizeof(SoundFrame);
 
 	WAVEHDR* current;
 	DWORD_PTR remain;
@@ -126,10 +126,10 @@ Sound_InitHost(ARMul_State *state)
 
 	format.wFormatTag = WAVE_FORMAT_PCM;
 	format.nChannels = 2;
-	format.wBitsPerSample = 16;
+	format.wBitsPerSample = sizeof(SoundData) * 8;
 	format.nSamplesPerSec = 44100;
-	format.nBlockAlign = format.nChannels * (format.wBitsPerSample / 8);
-	format.nAvgBytesPerSec =  format.nSamplesPerSec * format.nBlockAlign;
+	format.nBlockAlign = sizeof(SoundFrame);
+	format.nAvgBytesPerSec =  format.nSamplesPerSec * sizeof(SoundFrame);
 
 	if (waveOutOpen(&hWaveOut, WAVE_MAPPER, &format, (DWORD_PTR)sound_callback, (DWORD_PTR)&waveFreeBlockCount, CALLBACK_FUNCTION) != MMSYSERR_NOERROR) {
 		ControlPane_Error(false,"Failed to initialise the sound system");

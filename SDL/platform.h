@@ -40,9 +40,6 @@ static inline bool SDL_SetSurfaceColorKey(SDL_Surface *surface, bool enabled, Ui
 #define SDL_DestroySurface SDL_FreeSurface
 #define SDL_FillSurfaceRect SDL_FillRect
 
-/* Audio formats that were renamed in SDL3 */
-#define SDL_AUDIO_S16 AUDIO_S16SYS
-
 /* Events that were renamed in SDL3 */
 #define SDL_EVENT_QUIT SDL_QUIT
 #define SDL_EVENT_KEY_DOWN SDL_KEYDOWN

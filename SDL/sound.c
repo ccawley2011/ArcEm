@@ -15,16 +15,16 @@
 
 /* #define SOUND_VERBOSE */
 
-#define BUFFER_SAMPLES (32768) /* 16K stereo pairs */
+#define BUFFER_FRAMES (16384)
 
-SoundData sound_buffer[BUFFER_SAMPLES];
-volatile int32_t sound_buffer_in=BUFFER_SAMPLES/2; /* Number of samples we've placed in the buffer */
-volatile int32_t sound_buffer_out=0; /* Number of samples read out by the sound thread */
+SoundFrame sound_buffer[BUFFER_FRAMES];
+volatile int32_t sound_buffer_in=0; /* Number of frames we've placed in the buffer */
+volatile int32_t sound_buffer_out=0; /* Number of frames read out by the sound thread */
 volatile int32_t sound_underflows=0;
-volatile int32_t sound_buffer_hostout=0; /* Number of samples requested by the sound thread */
-static const int32_t sound_buff_mask=BUFFER_SAMPLES-1;
+volatile int32_t sound_buffer_hostout=0; /* Number of frames requested by the sound thread */
+static const int32_t sound_buff_mask=BUFFER_FRAMES-1;
 static float sound_inv_hostrate; /* 1/Sound_HostRate */
-static int32_t local_buffer_out = 0;
+static int32_t local_buffer_out;
 static int32_t buffer_threshold; /* Desired buffer level; chosen based around the output sample rate & buffer_seconds */
 static const float buffer_seconds = 0.1f; /* How much audio we want to try and keep buffered */
 
@@ -68,7 +68,7 @@ typedef struct {
 static PIDController pid_init(float Kp, float Ki, float Kd, float dt)
 {
   PIDController p = {0};
-  float scale = ((float) (1<<24)) * sound_inv_hostrate; /* Scale all of the PID coefficients so that errors which are specified in samples get converted to adjustments in (1<<24)'ths of a second */
+  float scale = ((float) (1<<24)) * sound_inv_hostrate; /* Scale all of the PID coefficients so that errors which are specified in frames get converted to adjustments in (1<<24)'ths of a second */
   p.A0 = (Kp + Ki*dt + Kd/dt) * scale;
   p.A1 = (-Kp - 2*Kd/dt) * scale;
   p.A2 = (Kd/dt) * scale;
@@ -106,12 +106,12 @@ static int32_t pid_step(PIDController *p)
 
 static PIDController sound_pid;
 
-static void Sound_CallbackImpl(void *userdata, uint8_t *stream, int len);
+static void Sound_CallbackImpl(void *userdata, SoundFrame *stream, int len);
 
 #if SDL_VERSION_ATLEAST(3, 0, 0)
 static SDL_AudioDeviceID device_id = 0;
 static SDL_AudioStream *device_stream = NULL;
-static Uint8 *callback_buffer = NULL;
+static SoundFrame *callback_buffer = NULL;
 static int callback_buffer_size;
 
 static void Sound_Callback(void *userdata, SDL_AudioStream *stream, int approx_amount, int total_amount) {
@@ -119,8 +119,8 @@ static void Sound_Callback(void *userdata, SDL_AudioStream *stream, int approx_a
 
   while (approx_amount > 0) {
     Sound_CallbackImpl(userdata, callback_buffer, callback_buffer_size);
-    SDL_PutAudioStreamData(stream, callback_buffer, callback_buffer_size);
-    approx_amount -= callback_buffer_size;
+    SDL_PutAudioStreamData(stream, callback_buffer, callback_buffer_size * sizeof(SoundFrame));
+    approx_amount -= callback_buffer_size * sizeof(SoundFrame);
   }
 }
 
@@ -134,13 +134,14 @@ static void Sound_Close(void)
   callback_buffer = NULL;
 }
 
-static bool Sound_Open(int *freq, int *channels, int *samples) {
+static bool Sound_Open(int *freq, int *frames) {
   SDL_AudioSpec desired, obtained;
   const int format = SDL_AUDIO_S16;
+  const int channels = 2;
 
   desired.freq = *freq;
   desired.format = format;
-  desired.channels = *channels;
+  desired.channels = channels;
 
   device_id = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &desired);
   if (device_id == 0) {
@@ -149,10 +150,11 @@ static bool Sound_Open(int *freq, int *channels, int *samples) {
   }
 
   SDL_PauseAudioDevice(device_id);
-  SDL_GetAudioDeviceFormat(device_id, &obtained, samples);
+  SDL_GetAudioDeviceFormat(device_id, &obtained, &callback_buffer_size);
+  *frames = callback_buffer_size;
   *freq = obtained.freq;
   obtained.format = format;
-  obtained.channels = *channels;
+  obtained.channels = channels;
 
   device_stream = SDL_CreateAudioStream(&obtained, &desired);
   if (!device_stream) {
@@ -161,10 +163,7 @@ static bool Sound_Open(int *freq, int *channels, int *samples) {
     return false;
   }
 
-  callback_buffer_size = SDL_AUDIO_BITSIZE(format) / 8;
-  callback_buffer_size *= *channels;
-  callback_buffer_size *= *samples;
-  callback_buffer = SDL_malloc(callback_buffer_size);
+  callback_buffer = SDL_malloc(callback_buffer_size * sizeof(SoundFrame));
   if (!callback_buffer) {
     ControlPane_Error(false,"Could not allocate audio buffer");
     Sound_Close();
@@ -200,7 +199,7 @@ static void Sound_Resume(void)
 static SDL_AudioDeviceID device_id;
 
 static void Sound_Callback(void *userdata, Uint8 *stream, int len) {
-  Sound_CallbackImpl(userdata, stream, len);
+  Sound_CallbackImpl(userdata, (void *)stream, len / sizeof(SoundFrame));
 }
 
 static void Sound_Close(void)
@@ -209,13 +208,13 @@ static void Sound_Close(void)
   device_id = 0;
 }
 
-static bool Sound_Open(int *freq, int *channels, int *samples) {
+static bool Sound_Open(int *freq, int *frames) {
   SDL_AudioSpec desired, obtained;
 
   desired.freq = *freq;
-  desired.format = SDL_AUDIO_S16;
-  desired.channels = *channels;
-  desired.samples = *samples;
+  desired.format = AUDIO_S16SYS;
+  desired.channels = 2;
+  desired.samples = *frames;
   desired.callback = Sound_Callback;
   desired.userdata = NULL;
 
@@ -227,8 +226,7 @@ static bool Sound_Open(int *freq, int *channels, int *samples) {
   }
 
   *freq = obtained.freq;
-  *channels = obtained.channels;
-  *samples = obtained.samples;
+  *frames = obtained.samples;
   return true;
 }
 
@@ -248,7 +246,7 @@ static void Sound_Resume(void)
 }
 #else
 static void Sound_Callback(void *userdata, Uint8 *stream, int len) {
-  Sound_CallbackImpl(userdata, stream, len);
+  Sound_CallbackImpl(userdata, (void *)stream, len / sizeof(SoundFrame));
 }
 
 static void Sound_Close(void)
@@ -256,13 +254,13 @@ static void Sound_Close(void)
   SDL_CloseAudio();
 }
 
-static bool Sound_Open(int *freq, int *channels, int *samples) {
+static bool Sound_Open(int *freq, int *frames) {
   SDL_AudioSpec desired, obtained;
 
   desired.freq = *freq;
-  desired.format = SDL_AUDIO_S16;
-  desired.channels = *channels;
-  desired.samples = *samples;
+  desired.format = AUDIO_S16SYS;
+  desired.channels = 2;
+  desired.samples = *frames;
   desired.callback = Sound_Callback;
   desired.userdata = NULL;
 
@@ -272,8 +270,7 @@ static bool Sound_Open(int *freq, int *channels, int *samples) {
   }
 
   *freq = obtained.freq;
-  *channels = obtained.channels;
-  *samples = obtained.samples;
+  *frames = obtained.samples;
   return true;
 }
 
@@ -293,7 +290,7 @@ static void Sound_Resume(void)
 }
 #endif
 
-SoundData *Sound_GetHostBuffer(size_t *destavail)
+SoundFrame *Sound_GetHostBuffer(size_t *destavail)
 {
   /* Work out how much space is available until next wrap point, or we start overwriting data */
   int32_t local_buffer_in,used,ofs,buffree;
@@ -302,8 +299,8 @@ SoundData *Sound_GetHostBuffer(size_t *destavail)
   used = local_buffer_in-sound_buffer_out;
   Sound_Unlock();
   ofs = local_buffer_in & sound_buff_mask;
-  buffree = BUFFER_SAMPLES-MAX(ofs,used);
-  *destavail = buffree>>1;
+  buffree = BUFFER_FRAMES-MAX(ofs,used);
+  *destavail = buffree;
   return sound_buffer + ofs;
 }
 
@@ -312,16 +309,15 @@ static void adjust_fudgerate(int32_t used, int32_t out)
   static float count;
   static int32_t error_count,old_out;
   int32_t adjust,error = used - buffer_threshold;
-  error = error >> 1; /* Re-scale to 16 bit sample pairs, so all our rate tracking will work correctly */
   sound_pid.error[0] += error;
 #ifdef SOUND_VERBOSE
   static int32_t emin,emax;
   if (error < emin) emin = error;
   if (error > emax) emax = error;
 #endif
-  /* Use number of host samples as our clock source, since that's likely to be a more stable clock than the one used to generate the samples
+  /* Use number of host frames as our clock source, since that's likely to be a more stable clock than the one used to generate the frames
    * The timing of PID adjustments will be a bit rough (we behave as if there's always PID_PERIOD time between each adjustment), but it still seems to work OK */
-  count += sound_inv_hostrate * ((out-old_out) >> 1);
+  count += sound_inv_hostrate * (out-old_out);
   old_out = out;
   error_count++;
   if (count < PID_PERIOD)
@@ -339,8 +335,8 @@ static void adjust_fudgerate(int32_t used, int32_t out)
   adjust = pid_step(&sound_pid);
 #ifdef SOUND_VERBOSE
   dbug_sound("level %f avg error %f (%f,%f,%f) fudge %f adjust %f remainder %f\n", sound_inv_hostrate*0.5f*used, sound_inv_hostrate*sound_pid.error[1], sound_inv_hostrate*emin, sound_inv_hostrate*emax, sound_inv_hostrate*(emax-emin), ((float)Sound_FudgeRate)/(1<<24), ((float)adjust)/(1<<24), count);
-  emin = BUFFER_SAMPLES;
-  emax = -BUFFER_SAMPLES;
+  emin = (BUFFER_FRAMES * 2);
+  emax = -(BUFFER_FRAMES * 2);
 #endif
   adjust += Sound_FudgeRate;
   /* Limit to within range [0.5,2.0] */
@@ -355,21 +351,20 @@ static void adjust_fudgerate(int32_t used, int32_t out)
   Sound_FudgeRate = adjust;
 }
 
-void Sound_HostBuffered(SoundData *buffer,size_t numSamples)
+void Sound_HostBuffered(SoundFrame *buffer,size_t numFrames)
 {
   int32_t local_buffer_in,used,out,underflows;
   UNUSED_VAR(buffer);
-  numSamples <<= 1;
   Sound_Lock();
   local_buffer_in = sound_buffer_in;
   used = local_buffer_in-sound_buffer_out;
   out = sound_buffer_hostout;
   underflows = sound_underflows;
   sound_underflows = 0;
-  LOG_EVENT("Sound_HostBuffered",numSamples);
+  LOG_EVENT("Sound_HostBuffered",numFrames);
   Sound_Unlock();
 
-  local_buffer_in += numSamples;
+  local_buffer_in += numFrames;
 
   if (underflows)
   {
@@ -383,7 +378,7 @@ void Sound_HostBuffered(SoundData *buffer,size_t numSamples)
   Sound_Unlock();
 }
 
-static void Sound_CallbackImpl(void *userdata, uint8_t *stream, int len)
+static void Sound_CallbackImpl(void *userdata, SoundFrame *stream, int len)
 {
   UNUSED_VAR(userdata);
 
@@ -391,35 +386,35 @@ static void Sound_CallbackImpl(void *userdata, uint8_t *stream, int len)
     int32_t avail;
 
     Sound_Lock();
-    sound_buffer_hostout += len/sizeof(SoundData);
+    sound_buffer_hostout += len;
     sound_buffer_out = local_buffer_out;
-    LOG_EVENT("Sound_CallbackImpl",-(len/sizeof(SoundData)));
+    LOG_EVENT("Sound_CallbackImpl",-len);
     avail = sound_buffer_in-local_buffer_out;
-    if (avail * (int32_t)sizeof(SoundData) < len)
+    if (avail < len)
       sound_underflows++;
     Sound_Unlock();
 
     if (avail) {
       int32_t ofs = local_buffer_out & sound_buff_mask;
 
-      if(ofs + avail > BUFFER_SAMPLES) {
+      if(ofs + avail > BUFFER_FRAMES) {
         /* We're about to wrap */
-        avail = BUFFER_SAMPLES-ofs;
+        avail = BUFFER_FRAMES-ofs;
       }
 
-      if (avail * (int32_t)sizeof(SoundData) > len) {
-        avail = len / sizeof(SoundData);
+      if (avail > len) {
+        avail = len;
       }
 
       memcpy(stream, sound_buffer + ofs,
-            avail * sizeof(SoundData));
+            avail * sizeof(SoundFrame));
 
       local_buffer_out += avail;
 
-      stream += avail * sizeof(SoundData);
-      len -= avail * sizeof(SoundData);
+      stream += avail;
+      len -= avail;
     } else {
-      memset(stream, 0, len);
+      memset(stream, 0, len * sizeof(SoundFrame));
       return;
     }
   }
@@ -428,11 +423,11 @@ static void Sound_CallbackImpl(void *userdata, uint8_t *stream, int len)
 bool
 Sound_InitHost(ARMul_State *state)
 {
-  int freq = 44100, channels = 2, samples = 512;
+  int freq = 44100, frames = 512;
 
   UNUSED_VAR(state);
 
-  if (!Sound_Open(&freq, &channels, &samples))
+  if (!Sound_Open(&freq, &frames))
   {
     return false;
   }
@@ -460,20 +455,20 @@ Sound_InitHost(ARMul_State *state)
   Sound_HostRate = freq<<10;
 
   /* Calculate the desired buffer level */
-  buffer_threshold = ((int)(buffer_seconds*freq))<<1;
+  buffer_threshold = (int)(buffer_seconds*freq);
   /* Low thresholds may cause issues */
-  if (buffer_threshold < (int32_t)Sound_BatchSize*4)
-    buffer_threshold = (int32_t)Sound_BatchSize*4;
-  if (buffer_threshold < samples*2*4)
-    buffer_threshold = samples*2*4;
+  if (buffer_threshold < (int32_t)Sound_BatchSize*2)
+    buffer_threshold = (int32_t)Sound_BatchSize*2;
+  if (buffer_threshold < frames*2)
+    buffer_threshold = frames*2;
   /* Big thresholds will cause problems too! */
-  if (buffer_threshold+(int32_t)Sound_BatchSize*4 > BUFFER_SAMPLES)
-    buffer_threshold = BUFFER_SAMPLES-(int32_t)Sound_BatchSize*4;
+  if (buffer_threshold+(int32_t)Sound_BatchSize*2 > BUFFER_FRAMES)
+    buffer_threshold = BUFFER_FRAMES-(int32_t)Sound_BatchSize*2;
 
   sound_buffer_in = buffer_threshold;
   local_buffer_out = 0;
 
-  warn_sound("Sound_Open got freq %d samples %d desired level %"PRId32" (%fs)\n", freq, samples, buffer_threshold, sound_inv_hostrate*0.5f*buffer_threshold);
+  warn_sound("Sound_Open got freq %d frames %d desired level %"PRId32" (%fs)\n", freq, frames, buffer_threshold, sound_inv_hostrate*0.5f*buffer_threshold);
 
   Sound_Resume();
 

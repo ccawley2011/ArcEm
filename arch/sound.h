@@ -15,12 +15,17 @@ extern void Sound_Shutdown(ARMul_State *state);
 
 typedef int16_t SoundData;
 
-extern size_t Sound_BatchSize; /* How many 16*2 sample batches to attempt to deliver to the platform code at once */
+typedef union {
+  SoundData channel[2];
+  uint32_t frame;
+} SoundFrame;
+
+extern size_t Sound_BatchSize; /* How many 16 frame batches to attempt to deliver to the platform code at once */
 extern CycleCount Sound_DMARate; /* How many cycles between DMA fetches */
 #ifdef SOUND_FUDGERATE_FRAC
 extern uint32_t Sound_FudgeRate; /* New version of Sound_FudgeRate. 8.24 scale factor applied to Sound_DMARate; can be used by host code to fine-tune audio buffer levels */
 #else
-extern CycleDiff Sound_FudgeRate; /* Old version of Sound_FudgeRate. Adjustment applied to DMA event timing, to increase/decrease time between each event by the given number of cycles. Flawed because it'll will result in uneven timing if there are different numbers of samples consumed per event. */
+extern CycleDiff Sound_FudgeRate; /* Old version of Sound_FudgeRate. Adjustment applied to DMA event timing, to increase/decrease time between each event by the given number of cycles. Flawed because it'll will result in uneven timing if there are different numbers of frames consumed per event. */
 #endif
 
 typedef enum {
@@ -43,14 +48,14 @@ extern bool Sound_InitHost(ARMul_State *state);
 extern void Sound_ShutdownHost(ARMul_State *state);
 
 /* This call is made to the platform code to get a pointer to an output buffer
-   destavail must be set to the available space, measured in the number of stereo pairs (i.e. 4 byte units)
+   destavail must be set to the available space, measured in the number of frames
 */
-extern SoundData *Sound_GetHostBuffer(size_t *destavail);
+extern SoundFrame *Sound_GetHostBuffer(size_t *destavail);
 
 /* This call is made to the platform code once the above buffer has been filled
-   numSamples is the number of stereo pairs that were placed in the buffer
+   numFrames is the number of frames that were placed in the buffer
 */
-extern void Sound_HostBuffered(SoundData *buffer,size_t numSamples);
+extern void Sound_HostBuffered(SoundFrame *buffer,size_t numFrames);
 #endif
 
 #endif

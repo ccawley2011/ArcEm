@@ -20,7 +20,7 @@ BPTR audioh = 0;
 
 static unsigned long sampleRate = 44100;
 
-SoundData sound_buffer[256*2]; /* Must be >= 2*Sound_BatchSize! */
+SoundFrame sound_buffer[256]; /* Must be >= Sound_BatchSize! */
 
 static bool openaudio(void)
 {
@@ -37,20 +37,18 @@ static bool openaudio(void)
 	return true;
 }
 
-SoundData *Sound_GetHostBuffer(size_t *destavail)
+SoundFrame *Sound_GetHostBuffer(size_t *destavail)
 {
 	/* Just assume we always have enough space for the max batch size */
-	*destavail = sizeof(sound_buffer)/(sizeof(SoundData)*2);
+	*destavail = countof(sound_buffer);
 	return sound_buffer;
 }
 
-void Sound_HostBuffered(SoundData *buffer,size_t numSamples)
+void Sound_HostBuffered(SoundFrame *buffer,size_t numFrames)
 {
-	numSamples *= 2;
-
 	/* TODO - Adjust Sound_FudgeRate to fine-tune how often we receive new data */
 
-	Write(audioh,buffer,numSamples*sizeof(SoundData));
+	Write(audioh,buffer,numFrames*sizeof(SoundFrame));
 }
 
 bool

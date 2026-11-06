@@ -68,20 +68,20 @@ nozeros:
 	LDR R5,[R5]
 	LDR R6,[R6]
 	@ Loop and fill
-	SUBS R3,R3,R4 @ Number of samples available
+	SUBS R3,R3,R4 @ Number of frames available
 	BLE endloop @ No more input data
 mainloop:
 	AND R8,R4,R6 @ Pos to read from
 	LDR R10,[R1] @ dest data
-	LDR R9,[R0,R8,LSL #1] @ Get input pair
+	LDR R9,[R0,R8,LSL #2] @ Get input frame
 	ADD R10,R10,R9 @ Mix in (no overflow checks!)
 	STR R10,[R1],#4
 	ADD R7,R7,R5 @ Increment fraction accumulator
 	MOV R10,R7,LSR #24 @ Get any whole movements
 	BIC R7,R7,#0xFF000000 @ Get rid of whole part
-	ADD R4,R4,R10,LSL #1 @ Increment out pos
+	ADD R4,R4,R10 @ Increment out pos
 	@ Check for buffer ends
-	SUBS R3,R3,R10,LSL #1
+	SUBS R3,R3,R10
 	BLE endloop
 	CMP R1,R2
 	BLT mainloop
@@ -107,16 +107,16 @@ endloop:
 	LDR R6,[R6]
 	CMP R3,#0
 	BEQ nodata
-	SUBS R3,R3,R4 @ Number of samples available
+	SUBS R3,R3,R4 @ Number of frames available
 	BLE nodata @ No more input data
 	CMP R14,#0
 	BEQ copyloop
 mixloop:
 	AND R8,R4,R6 @ Pos to read from
 	LDR R14,[R1] @ dest data
-	ADD R4,R4,#2 @ Increment out pos
-	LDR R7,[R0,R8,LSL #1] @ Get input pair
-	SUBS R3,R3,#2
+	ADD R4,R4,#1 @ Increment out pos
+	LDR R7,[R0,R8,LSL #2] @ Get input frame
+	SUBS R3,R3,#1
 	ADD R14,R14,R7 @ Mix in (no overflow checks!)
 	STR R14,[R1],#4
 	@ Check for buffer ends
@@ -131,11 +131,11 @@ mix_done:
 
 copyloop:
 	AND R8,R4,R6 @ Pos to read from
-	LDR R14,[R0,R8,LSL #1] @ Get input pair
-	ADD R4,R4,#2 @ Increment out pos
+	LDR R14,[R0,R8,LSL #2] @ Get input frame
+	ADD R4,R4,#1 @ Increment out pos
 	STR R14,[R1],#4
 	@ Check for buffer ends
-	SUBS R3,R3,#2
+	SUBS R3,R3,#1
 	BLE zeroloop
 	CMP R1,R2
 	BLT copyloop

@@ -22,33 +22,32 @@ static uint32_t sampleRate = 44100;
 
 static int soundDevice;
 
-SoundData sound_buffer[256*2]; /* Must be >= 2*Sound_BatchSize! */
+SoundFrame sound_buffer[256]; /* Must be >= Sound_BatchSize! */
 
-SoundData *Sound_GetHostBuffer(size_t *destavail)
+SoundFrame *Sound_GetHostBuffer(size_t *destavail)
 {
   /* Just assume we always have enough space for the max batch size */
-  *destavail = sizeof(sound_buffer)/(sizeof(SoundData)*2);
+  *destavail = countof(sound_buffer);
   return sound_buffer;
 }
 
-void Sound_HostBuffered(SoundData *buffer,size_t numSamples)
+void Sound_HostBuffered(SoundFrame *buffer,size_t numFrames)
 {
   audio_buf_info buf;
-  numSamples <<= 1;
   if (ioctl(soundDevice, SOUND_PCM_GETOSPACE, &buf) != -1) {
     /* Adjust fudge rate based around how much buffer space is available
        We aim for the buffer to be somewhere between 1/4 and 3/4 full, but don't
        explicitly set the buffer size, so we're at the mercy of the sound system
        in terms of how much lag there'll be */
     int32_t bufsize = buf.fragsize*buf.fragstotal;
-    int32_t buffree = buf.bytes/sizeof(SoundData);
-    int32_t used = (bufsize-buf.bytes)/sizeof(SoundData);
+    int32_t buffree = buf.bytes/sizeof(SoundFrame);
+    int32_t used = (bufsize-buf.bytes)/sizeof(SoundFrame);
     int32_t stepsize = Sound_DMARate>>2;
-    bufsize /= sizeof(SoundData);
-    if((int32_t)numSamples > buffree)
+    bufsize /= sizeof(SoundFrame);
+    if((int32_t)numFrames > buffree)
     {
-      warn_sound("*** sound overflow! %"PRId32" %d %d %d ***\n",(int32_t)numSamples-buffree,ARMul_EmuRate,Sound_FudgeRate,Sound_DMARate);
-      numSamples = buffree; /* We could block until space is available, but I'm woried we'd get stuck blocking forever because the FudgeRate increase wouldn't compensate for the ARMul cycles lost due to blocking */
+      warn_sound("*** sound overflow! %"PRId32" %d %d %d ***\n",(int32_t)numFrames-buffree,ARMul_EmuRate,Sound_FudgeRate,Sound_DMARate);
+      numFrames = buffree; /* We could block until space is available, but I'm woried we'd get stuck blocking forever because the FudgeRate increase wouldn't compensate for the ARMul cycles lost due to blocking */
       if(Sound_FudgeRate < -stepsize)
         Sound_FudgeRate = Sound_FudgeRate/2;
       else
@@ -77,7 +76,7 @@ void Sound_HostBuffered(SoundData *buffer,size_t numSamples)
     }
   }
   
-  write(soundDevice,buffer,numSamples*sizeof(SoundData));
+  write(soundDevice,buffer,numFrames*sizeof(SoundFrame));
 }
 
 bool

@@ -31,12 +31,12 @@
 
 int sound_handler_id=0; /* ID of our sound handler (0 if uninstalled) */
 
-#define BUFFER_SAMPLES (32768) /* 16K stereo pairs */
+#define BUFFER_FRAMES (16384)
 
-SoundData sound_buffer[BUFFER_SAMPLES];
-volatile int sound_buffer_in=BUFFER_SAMPLES; /* Number of samples we've placed in the buffer */
-volatile int sound_buffer_out=0; /* Number of samples read out by the IRQ routine */
-int sound_buff_mask=BUFFER_SAMPLES-1; /* For benefit of assembler code */
+SoundFrame sound_buffer[BUFFER_FRAMES];
+volatile int sound_buffer_in=BUFFER_FRAMES; /* Number of frames we've placed in the buffer */
+volatile int sound_buffer_out=0; /* Number of frames read out by the IRQ routine */
+int sound_buff_mask=BUFFER_FRAMES-1; /* For benefit of assembler code */
 int sound_rate = 1<<24; /* Fixed output rate! */
 static int buffer_threshold; /* Threshold value used to control desired buffer level; chosen based around the output sample rate & buffer_seconds */
 static float buffer_seconds = 0.2f; /* How much audio we want to try and keep buffered */ 
@@ -150,14 +150,14 @@ static bool init_sharedsound(void)
 	/* Get our sample rate */
 	_swix(SharedSound_SampleRate,_INR(0,1)|_OUT(1),sound_handler_id,0,&Sound_HostRate);
 	/* Calculate the buffer threshold value
-	   This is the low threshold value, so we divide by 512 to get the desired level, then by two again to get the low level */
-	buffer_threshold = ((int)(buffer_seconds*((float)Sound_HostRate)))>>10;
+	   This is the low threshold value, so we divide by 512 to get the desired level */
+	buffer_threshold = ((int)(buffer_seconds*((float)Sound_HostRate)))>>9;
 	/* Low thresholds may cause issues */
-	if(buffer_threshold<(int)Sound_BatchSize*4)
-		buffer_threshold = (int)Sound_BatchSize*4;
+	if(buffer_threshold<(int)Sound_BatchSize*2)
+		buffer_threshold = (int)Sound_BatchSize*2;
 	/* Big thresholds will cause problems too! */
-	if(buffer_threshold*4 > BUFFER_SAMPLES)
-		buffer_threshold = BUFFER_SAMPLES>>2;
+	if(buffer_threshold > BUFFER_FRAMES/2)
+		buffer_threshold = BUFFER_FRAMES/2;
 	warn_sound("Host audio rate %dHz, using buffer threshold %d\n",Sound_HostRate>>10,buffer_threshold);
 	return true;
 }                           
@@ -208,24 +208,24 @@ void Sound_ShutdownHost(ARMul_State *state)
   shutdown_sharedsound();
 }
 
-SoundData *Sound_GetHostBuffer(size_t *destavail)
+SoundFrame *Sound_GetHostBuffer(size_t *destavail)
 {
   size_t buffree;
   int used, ofs;
   /* Work out how much space is available until next wrap point, or we start overwriting data */
   if(!sound_handler_id)
   {
-    *destavail = BUFFER_SAMPLES>>1;
+    *destavail = BUFFER_FRAMES;
     return sound_buffer;
   }
-  used = sound_buffer_in-sound_buffer_out;
-  ofs = sound_buffer_in & sound_buff_mask;
-  buffree = BUFFER_SAMPLES-MAX(ofs,used);
-  *destavail = buffree>>1;
+  used = (sound_buffer_in-sound_buffer_out);
+  ofs = (sound_buffer_in & sound_buff_mask);
+  buffree = BUFFER_FRAMES-MAX(ofs,used);
+  *destavail = buffree;
   return sound_buffer + ofs;
 }
 
-void Sound_HostBuffered(SoundData *buffer,size_t numSamples)
+void Sound_HostBuffered(SoundFrame *buffer,size_t numFrames)
 {
   size_t buffree;
   int used;
@@ -235,14 +235,12 @@ void Sound_HostBuffered(SoundData *buffer,size_t numSamples)
   if(!sound_handler_id)
     return;
 
-  used = sound_buffer_in-sound_buffer_out;
-  buffree = BUFFER_SAMPLES-used;
+  used = (sound_buffer_in-sound_buffer_out);
+  buffree = BUFFER_FRAMES-used;
 
-  numSamples <<= 1;
+  sound_buffer_in += numFrames;
 
-  sound_buffer_in += numSamples;
-
-  if(buffree == numSamples)
+  if(buffree == numFrames)
   {
     warn_sound("*** sound overflow! ***\n");
     if(Sound_FudgeRate < -10)
