@@ -97,7 +97,7 @@ jobs:
       matrix:
         mingw:
         - { msystem: mingw32,    msys-env: mingw-w64-i686,          runs-on: windows-latest }
-        - { msystem: mingw64,    msys-env: mingw-w64-x86_64,        runs-on: windows-latest }
+        - { msystem: ucrt64,     msys-env: mingw-w64-ucrt-x86_64,   runs-on: windows-latest }
         - { msystem: clangarm64, msys-env: mingw-w64-clang-aarch64, runs-on: windows-11-arm }
 
     steps:
@@ -106,6 +106,7 @@ jobs:
       with:
         msystem: ${{ matrix.mingw.msystem }}
         install: ${{ matrix.mingw.msys-env }}-cc ${{ matrix.mingw.msys-env }}-cmake
+        suppress-deprecation-warnings: msystem-mingw32
     - uses: actions/checkout@v7
     - name: Configure
       run: cmake -B build/ -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} .
