@@ -48,6 +48,7 @@ jobs:
       with:
         name: arcem-macosx
         path: ./build/ArcEm-*.dmg
+        archive: false
 
   build-msvc:
     name: Windows (MSVC ${{ matrix.msvc.platform }})
@@ -72,6 +73,7 @@ jobs:
       with:
         name: arcem-msvc-${{ matrix.msvc.platform }}
         path: build/ArcEm-*.zip
+        archive: false
 
   build-mingw:
     name: Windows (${{ matrix.mingw.msystem }})
@@ -106,6 +108,7 @@ jobs:
       with:
         name: arcem-${{ matrix.mingw.msystem }}
         path: ./build/ArcEm-*.zip
+        archive: false
 
   build-watcom:
     name: Windows (OpenWatcom)
